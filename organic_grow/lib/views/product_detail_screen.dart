@@ -1,0 +1,489 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:organic_grow/config/app_color.dart';
+import 'package:organic_grow/config/app_typography.dart';
+import 'package:organic_grow/core/models/product_model.dart';
+import 'package:organic_grow/core/controllers/cart_controller.dart';
+import 'package:organic_grow/core/models/cart_item_model.dart';
+
+class ProductDetailScreen extends StatelessWidget {
+  ProductDetailScreen({super.key});
+
+  final CartController cartController = Get.find<CartController>();
+  final RxInt quantity = 1.obs;
+
+  @override
+  Widget build(BuildContext context) {
+    // Retrieve product safely from arguments
+    final Product product = Get.arguments as Product;
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          // 1. Gorgeous Scrollable Content
+          CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Dynamic Image Header with custom back/wishlist overlays
+              SliverAppBar(
+                expandedHeight: 380,
+                pinned: true,
+                stretch: true,
+                backgroundColor: AppColor.primaryColor,
+                elevation: 0,
+                leading: Container(
+                  margin: const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.4),
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+                    onPressed: () => Get.back(),
+                  ),
+                ),
+                actions: [
+                  Container(
+                    margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.favorite_rounded, color: Colors.pink, size: 20),
+                      onPressed: () {
+                        Get.snackbar(
+                          'Added to Wishlist 💖',
+                          '${product.name} is added to your wishlist!',
+                          backgroundColor: Colors.pink.withOpacity(0.9),
+                          colorText: Colors.white,
+                          snackPosition: SnackPosition.BOTTOM,
+                          borderRadius: 16,
+                          margin: const EdgeInsets.all(16),
+                          icon: const Icon(Icons.favorite_rounded, color: Colors.white),
+                          duration: const Duration(seconds: 1),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+                flexibleSpace: FlexibleSpaceBar(
+                  stretchModes: const [
+                    StretchMode.zoomBackground,
+                    StretchMode.blurBackground,
+                  ],
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Render dynamic Image
+                      product.image.startsWith('http')
+                          ? Image.network(
+                              product.image,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => _buildImageFallback(),
+                            )
+                          : Image.asset(
+                              product.image,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) => _buildImageFallback(),
+                            ),
+                      // Soft organic gradient overlay on image base
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withOpacity(0.02),
+                                Colors.black.withOpacity(0.2),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Product Info and Details Panel
+              SliverToBoxAdapter(
+                child: Container(
+                  transform: Matrix4.translationValues(0, -28, 0),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 20,
+                        offset: const Offset(0, -10),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Tags row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColor.primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.eco_rounded, color: AppColor.primaryColor, size: 14),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '100% Organic',
+                                    style: AppTypography.caption.copyWith(
+                                      color: AppColor.primaryColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              product.stock > 0 ? 'In Stock' : 'Out of Stock',
+                              style: AppTypography.caption.copyWith(
+                                color: product.stock > 0 ? AppColor.primaryColor : Colors.redAccent,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Title & Unit description
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    product.name,
+                                    style: AppTypography.h2.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColor.textColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Unit: 1 ${product.unit}',
+                                    style: AppTypography.bodySmall.copyWith(
+                                      color: AppColor.textColor.withOpacity(0.5),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Price Badge
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '₹${product.price.toStringAsFixed(2)}',
+                                  style: AppTypography.h2.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColor.primaryColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '/ per ${product.unit}',
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColor.textColor.withOpacity(0.4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Rating overview
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    product.rating.toStringAsFixed(1),
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.amber[800],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Guaranteed Freshness 🌟',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColor.textColor.withOpacity(0.5),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 28),
+                        const Divider(height: 1),
+                        const SizedBox(height: 24),
+
+                        // Product Description
+                        Text(
+                          'Product Description',
+                          style: AppTypography.h4.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColor.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          product.description,
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: AppColor.textColor.withOpacity(0.65),
+                            height: 1.6,
+                          ),
+                        ),
+
+                        const SizedBox(height: 28),
+                        const Divider(height: 1),
+                        const SizedBox(height: 24),
+
+                        // Quantity Selector Card
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Choose Quantity',
+                              style: AppTypography.bodyLarge.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColor.textColor,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).dividerColor.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  _buildQtyActionButton(
+                                    icon: Icons.remove_rounded,
+                                    onTap: () {
+                                      if (quantity.value > 1) quantity.value--;
+                                    },
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                                    child: Obx(
+                                      () => Text(
+                                        '${quantity.value}',
+                                        style: AppTypography.bodyLarge.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColor.textColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  _buildQtyActionButton(
+                                    icon: Icons.add_rounded,
+                                    onTap: () {
+                                      if (quantity.value < product.stock) {
+                                        quantity.value++;
+                                      } else {
+                                        Get.snackbar(
+                                          'Stock Limit',
+                                          'Only ${product.stock} items are available in stock.',
+                                          backgroundColor: Colors.amber[800],
+                                          colorText: Colors.white,
+                                          snackPosition: SnackPosition.BOTTOM,
+                                        );
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Massive spacing to ensure scroll clears the bottom bar
+                        const SizedBox(height: 120),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // 2. Sticky Floating Bottom Action Sheet
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(30),
+                  topRight: Radius.circular(30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 20,
+                    offset: const Offset(0, -5),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                top: false,
+                child: Row(
+                  children: [
+                    // Total pricing summary
+                    Expanded(
+                      flex: 4,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Total Price',
+                            style: AppTypography.caption.copyWith(
+                              color: AppColor.textColor.withOpacity(0.5),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Obx(
+                            () => Text(
+                              '₹${(product.price * quantity.value).toStringAsFixed(2)}',
+                              style: AppTypography.h2.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColor.primaryColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Add to Basket button
+                    Expanded(
+                      flex: 6,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          cartController.addToCart(
+                            CartItem(
+                              id: product.id,
+                              name: product.name,
+                              price: product.price,
+                              image: product.image,
+                              quantity: quantity.value,
+                            ),
+                          );
+                          Get.snackbar(
+                            'Added to Basket 🛍️',
+                            '${quantity.value}x ${product.name} added successfully!',
+                            backgroundColor: AppColor.primaryColor,
+                            colorText: Colors.white,
+                            snackPosition: SnackPosition.BOTTOM,
+                            borderRadius: 16,
+                            margin: const EdgeInsets.all(16),
+                            icon: const Icon(Icons.shopping_basket_rounded, color: Colors.white),
+                            duration: const Duration(seconds: 2),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColor.primaryColor,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: Text(
+                          'Add to Basket',
+                          style: AppTypography.buttonLarge.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQtyActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 4,
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 18, color: AppColor.primaryColor),
+      ),
+    );
+  }
+
+  Widget _buildImageFallback() {
+    return Container(
+      color: const Color(0xFFF4F9F5),
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.eco_rounded,
+        size: 80,
+        color: AppColor.primaryColor,
+      ),
+    );
+  }
+}
