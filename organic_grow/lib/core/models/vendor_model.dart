@@ -22,6 +22,7 @@ class Vendor {
   final String pincode;
   final double latitude;
   final double longitude;
+  final double? distance;
 
   Vendor({
     required this.id,
@@ -47,6 +48,7 @@ class Vendor {
     this.pincode = '',
     this.latitude = 0.0,
     this.longitude = 0.0,
+    this.distance,
   });
 
   factory Vendor.fromJson(Map<String, dynamic> json) {
@@ -54,9 +56,9 @@ class Vendor {
     final location = address['location'] ?? {};
 
     return Vendor(
-      id: json['_id'] ?? '',
-      shopName: json['shopName'] ?? '',
-      ownerName: json['ownerName'] ?? '',
+      id: json['_id'] ?? json['id'] ?? '',
+      shopName: json['shopName'] ?? json['name'] ?? '',
+      ownerName: json['ownerName'] ?? json['name'] ?? '',
       phone: json['phone'] ?? '',
       shopImage: json['shopImage'] ?? '',
       shopBanner: json['shopBanner'] ?? '',
@@ -77,6 +79,7 @@ class Vendor {
       pincode: address['pincode'] ?? '',
       latitude: (location['latitude'] ?? 0).toDouble(),
       longitude: (location['longitude'] ?? 0).toDouble(),
+      distance: json['distance'] != null ? (json['distance'] as num).toDouble() : null,
     );
   }
 
@@ -99,6 +102,7 @@ class Vendor {
       'isApproved': isApproved,
       'isOnline': isOnline,
       'cuisineTags': cuisineTags,
+      if (distance != null) 'distance': distance,
       'address': {
         'fullAddress': fullAddress,
         'city': city,

@@ -20,6 +20,8 @@ import 'package:organic_grow/views/sub_pages/help_screen.dart';
 import 'package:organic_grow/views/sub_pages/privacy_policy_screen.dart';
 import 'package:organic_grow/views/sub_pages/terms_of_service_screen.dart';
 import 'package:organic_grow/views/sub_pages/about_app_screen.dart';
+import 'package:organic_grow/views/sub_pages/checkout_screen.dart';
+import 'package:organic_grow/views/sub_pages/order_success_screen.dart';
 
 final List<GetPage> getPages = [
   GetPage( 
@@ -116,5 +118,15 @@ final List<GetPage> getPages = [
     name: '/about',
     page: () => const AboutAppScreen(),
     transition: Transition.rightToLeft,
+  ),
+  GetPage(
+    name: '/checkout',
+    page: () => CheckoutScreen(),
+    transition: Transition.rightToLeft,
+  ),
+  GetPage(
+    name: '/order-success',
+    page: () => const OrderSuccessScreen(),
+    transition: Transition.fadeIn,
   ),
 ];

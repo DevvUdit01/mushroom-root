@@ -38,9 +38,10 @@ class CartController extends GetxController {
 
   /// Add item to cart via server API (handles vendor conflict)
   Future<void> addToCart(CartItem item) async {
+    if (isLoading.value) return; // Guard against double-tap / double-call
     try {
       isLoading.value = true;
-      final response = await ApiService.addToCart(item.id, quantity: 1);
+      final response = await ApiService.addToCart(item.id, quantity: item.quantity);
 
       if (response['success'] == true && response['cart'] != null) {
         // Successfully added
@@ -208,6 +209,12 @@ class CartController extends GetxController {
     currentVendorName.value = '';
     deliveryCharge.value = 0.0;
   }
+
+  /// Clear local cart state (public accessor for logout)
+  void clearLocalCart() {
+    _clearLocalState();
+  }
+
 
   /// Zomato-style vendor switch confirmation dialog
   void _showVendorSwitchDialog(CartItem newItem) {

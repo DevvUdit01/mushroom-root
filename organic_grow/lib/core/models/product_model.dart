@@ -55,18 +55,18 @@ class Product {
     }
 
     // Parse vendor
-    final vendorObj = json['vendorId'];
+    final vendorObj = json['vendorId'] ?? json['vendor'];
     String vId = '';
     String vName = '';
     if (vendorObj is Map) {
-      vId = vendorObj['_id'] ?? '';
-      vName = vendorObj['shopName'] ?? '';
+      vId = vendorObj['_id'] ?? vendorObj['id'] ?? '';
+      vName = vendorObj['shopName'] ?? vendorObj['name'] ?? '';
     } else if (vendorObj is String) {
       vId = vendorObj;
     }
 
     return Product(
-      id: json['_id'] ?? '',
+      id: json['_id'] ?? json['id'] ?? '',
       name: json['productName'] ?? '',
       price: (json['sellingPrice'] ?? json['mrpPrice'] ?? 0).toDouble(),
       mrpPrice: (json['mrpPrice'] ?? 0).toDouble(),

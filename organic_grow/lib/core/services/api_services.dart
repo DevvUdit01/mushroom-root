@@ -5,6 +5,9 @@ import 'package:organic_grow/core/models/category_model.dart';
 import 'package:organic_grow/core/models/product_model.dart';
 import 'package:organic_grow/core/models/vendor_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get/get.dart' hide Response, MultipartFile, FormData;
+import 'package:organic_grow/core/controllers/cart_controller.dart';
+import 'package:organic_grow/core/controllers/wishlist_controller.dart';
 
 class ApiService {
   static const String baseUrl = 'http://192.168.1.15:5000/api';
@@ -40,6 +43,8 @@ class ApiService {
       userToken = prefs.getString(_tokenKey);
       if (userToken != null && userToken!.isNotEmpty) {
         initInterceptors();
+        // Load cart and wishlist from server once token is loaded
+        _fetchUserDataOnTokenChange();
       }
     } catch (e) {
       debugPrint("Failed to load saved token: $e");
@@ -53,6 +58,8 @@ class ApiService {
       await prefs.setString(_tokenKey, token);
       userToken = token;
       initInterceptors();
+      // Load cart and wishlist from server once token is saved
+      _fetchUserDataOnTokenChange();
     } catch (e) {
       debugPrint("Failed to save token: $e");
     }
@@ -65,8 +72,38 @@ class ApiService {
       await prefs.remove(_tokenKey);
       userToken = null;
       initInterceptors();
+      // Clear cart and wishlist on logout
+      _clearUserDataOnLogout();
     } catch (e) {
       debugPrint("Failed to clear token: $e");
+    }
+  }
+
+  // Helper helper to fetch cart and wishlist on token load/save
+  static void _fetchUserDataOnTokenChange() {
+    try {
+      if (Get.isRegistered<CartController>()) {
+        Get.find<CartController>().fetchCartFromServer();
+      }
+      if (Get.isRegistered<WishlistController>()) {
+        Get.find<WishlistController>().fetchWishlistFromServer();
+      }
+    } catch (e) {
+      debugPrint("Failed to load user data on token change: $e");
+    }
+  }
+
+  // Helper helper to clear cart and wishlist on logout
+  static void _clearUserDataOnLogout() {
+    try {
+      if (Get.isRegistered<CartController>()) {
+        Get.find<CartController>().clearLocalCart();
+      }
+      if (Get.isRegistered<WishlistController>()) {
+        Get.find<WishlistController>().wishlistItems.clear();
+      }
+    } catch (e) {
+      debugPrint("Failed to clear user data on logout: $e");
     }
   }
 
@@ -281,9 +318,12 @@ class ApiService {
   // ==========================================
 
   // Fetch all products (for featured section)
-  static Future<List<Product>> fetchFeaturedProducts() async {
+  static Future<List<Product>> fetchFeaturedProducts({double? lat, double? lng}) async {
     try {
-      final response = await _dio.get('/products');
+      final response = await _dio.get('/products', queryParameters: {
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
+      });
       if (response.data['success'] == true) {
         final List<dynamic> list = response.data['products'] ?? [];
         return list.map((json) {
@@ -522,6 +562,49 @@ class ApiService {
   }
 
   // ==========================================
+  // WISHLIST APIs 💖 (Server-Side)
+  // ==========================================
+
+  /// Fetch user's wishlist from server
+  static Future<Map<String, dynamic>?> fetchWishlist() async {
+    try {
+      initInterceptors();
+      final response = await _dio.get('/wishlist');
+      if (response.data['success'] == true) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      debugPrint("Failed to fetch wishlist: $e");
+      return null;
+    }
+  }
+
+  /// Add item to wishlist
+  static Future<Map<String, dynamic>> addToWishlist(String productId) async {
+    try {
+      initInterceptors();
+      final response = await _dio.post('/wishlist/add', data: {
+        'productId': productId,
+      });
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to add to wishlist.');
+    }
+  }
+
+  /// Remove item from wishlist
+  static Future<Map<String, dynamic>> removeFromWishlist(String productId) async {
+    try {
+      initInterceptors();
+      final response = await _dio.delete('/wishlist/remove/$productId');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to remove from wishlist.');
+    }
+  }
+
+  // ==========================================
   // BANNER (mock for now)
   // ==========================================
 
@@ -533,5 +616,122 @@ class ApiService {
       "assets/banner_images/banner2.png",
       "assets/banner_images/banner3.png",
     ];
+  }
+
+  // ==========================================
+  // PROFILE UPDATE
+  // ==========================================
+
+  /// Update user profile (name, email) on backend
+  static Future<Map<String, dynamic>> updateProfile({
+    required String name,
+    required String email,
+  }) async {
+    try {
+      initInterceptors();
+      final response = await _dio.put('/auth/profile', data: {
+        'name': name,
+        'email': email,
+      });
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to update profile.');
+    }
+  }
+
+  /// Upload profile photo — sends image as multipart form-data
+  static Future<Map<String, dynamic>> uploadProfilePhoto(String filePath) async {
+    try {
+      initInterceptors();
+      final formData = FormData.fromMap({
+        'profileImage': await MultipartFile.fromFile(
+          filePath,
+          filename: filePath.split('/').last,
+        ),
+      });
+      final response = await _dio.post('/auth/profile/photo', data: formData);
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to upload profile photo.');
+    }
+  }
+
+  // ==========================================
+  // ORDER HISTORY
+  // ==========================================
+
+  /// Fetch user's order history from backend
+  static Future<Map<String, dynamic>> fetchOrders() async {
+    try {
+      initInterceptors();
+      final response = await _dio.get('/auth/orders');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch orders.');
+    }
+  }
+
+  /// Place an order from the cart
+  static Future<Map<String, dynamic>> placeOrder(String paymentMethod) async {
+    try {
+      initInterceptors();
+      final response = await _dio.post('/orders/place', data: {
+        'paymentMethod': paymentMethod,
+      });
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to place order.');
+    }
+  }
+
+  // ==========================================
+  // OFFERS
+  // ==========================================
+  
+  /// Fetch the special offer
+  static Future<Map<String, dynamic>> fetchSpecialOffer() async {
+    try {
+      final response = await _dio.get('/offers/special');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch special offer.');
+    }
+  }
+
+  // ==========================================
+  // NOTIFICATIONS
+  // ==========================================
+
+  /// Fetch user notifications from backend
+  static Future<Map<String, dynamic>> fetchNotifications() async {
+    try {
+      initInterceptors();
+      final response = await _dio.get('/auth/notifications');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch notifications.');
+    }
+  }
+
+  /// Mark a single notification as read
+  static Future<Map<String, dynamic>> markNotificationRead(String id) async {
+    try {
+      initInterceptors();
+      final response = await _dio.put('/auth/notifications/$id/read');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to mark notification.');
+    }
+  }
+
+  /// Mark all notifications as read
+  static Future<Map<String, dynamic>> markAllNotificationsRead() async {
+    try {
+      initInterceptors();
+      final response = await _dio.put('/auth/notifications/read-all');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to mark all notifications.');
+    }
   }
 }

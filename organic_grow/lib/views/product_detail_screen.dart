@@ -5,17 +5,39 @@ import 'package:organic_grow/config/app_typography.dart';
 import 'package:organic_grow/core/models/product_model.dart';
 import 'package:organic_grow/core/controllers/cart_controller.dart';
 import 'package:organic_grow/core/models/cart_item_model.dart';
+import 'package:organic_grow/core/controllers/home_page_controller.dart';
+import 'package:organic_grow/core/controllers/wishlist_controller.dart';
 
 class ProductDetailScreen extends StatelessWidget {
   ProductDetailScreen({super.key});
 
-  final CartController cartController = Get.find<CartController>();
+  final CartController cartController = Get.isRegistered<CartController>()
+      ? Get.find<CartController>()
+      : Get.put(CartController());
+  final WishlistController wishlistController = Get.isRegistered<WishlistController>()
+      ? Get.find<WishlistController>()
+      : Get.put(WishlistController());
   final RxInt quantity = 1.obs;
 
   @override
   Widget build(BuildContext context) {
     // Retrieve product safely from arguments
     final Product product = Get.arguments as Product;
+
+    // Resolve vendor name dynamically if empty
+    final HomeController homeController = Get.isRegistered<HomeController>()
+        ? Get.find<HomeController>()
+        : Get.put(HomeController());
+    String sellerName = product.vendorName;
+    if (sellerName.isEmpty && product.vendorId.isNotEmpty) {
+      final v = homeController.vendors.firstWhereOrNull((vendor) => vendor.id == product.vendorId);
+      if (v != null) {
+        sellerName = v.shopName;
+      }
+    }
+    if (sellerName.isEmpty) {
+      sellerName = 'Organic Grow Store';
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -44,29 +66,26 @@ class ProductDetailScreen extends StatelessWidget {
                   ),
                 ),
                 actions: [
-                  Container(
-                    margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.favorite_rounded, color: Colors.pink, size: 20),
-                      onPressed: () {
-                        Get.snackbar(
-                          'Added to Wishlist 💖',
-                          '${product.name} is added to your wishlist!',
-                          backgroundColor: Colors.pink.withOpacity(0.9),
-                          colorText: Colors.white,
-                          snackPosition: SnackPosition.BOTTOM,
-                          borderRadius: 16,
-                          margin: const EdgeInsets.all(16),
-                          icon: const Icon(Icons.favorite_rounded, color: Colors.white),
-                          duration: const Duration(seconds: 1),
-                        );
-                      },
-                    ),
-                  ),
+                  Obx(() {
+                    final isFav = wishlistController.isFavorite(product.id);
+                    return Container(
+                      margin: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.4),
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        icon: Icon(
+                          isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: isFav ? Colors.pink : Colors.white,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          wishlistController.toggleWishlist(product);
+                        },
+                      ),
+                    );
+                  }),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
                   stretchModes: const [
@@ -274,6 +293,88 @@ class ProductDetailScreen extends StatelessWidget {
                         const Divider(height: 1),
                         const SizedBox(height: 24),
 
+                        // Sold By Card
+                        if (product.vendorId.isNotEmpty) ...[
+                          Text(
+                            'Sold By',
+                            style: AppTypography.h4.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: AppColor.textColor,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          GestureDetector(
+                            onTap: () {
+                              Get.toNamed('/vendor-store', arguments: product.vendorId);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: AppColor.primaryColor.withOpacity(0.15),
+                                  width: 1.2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColor.primaryColor.withOpacity(0.02),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: AppColor.primaryColor.withOpacity(0.08),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.storefront_rounded,
+                                      color: AppColor.primaryColor,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          sellerName,
+                                          style: AppTypography.bodyLarge.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColor.textColor,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Tap to visit store and explore more products',
+                                          style: AppTypography.caption.copyWith(
+                                            color: Colors.grey[500],
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    color: AppColor.primaryColor,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          const Divider(height: 1),
+                          const SizedBox(height: 24),
+                        ],
+
                         // Quantity Selector Card
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -409,6 +510,9 @@ class ProductDetailScreen extends StatelessWidget {
                               price: product.price,
                               image: product.image,
                               quantity: quantity.value,
+                              vendorId: product.vendorId,
+                              vendorName: sellerName,
+                              unit: product.unit,
                             ),
                           );
                           Get.snackbar(

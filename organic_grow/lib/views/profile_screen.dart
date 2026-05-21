@@ -3,6 +3,9 @@ import 'package:get/get.dart';
 import 'package:organic_grow/config/app_color.dart';
 import 'package:organic_grow/config/app_typography.dart';
 import 'package:organic_grow/core/controllers/profile_controller.dart';
+import 'package:organic_grow/core/controllers/order_controller.dart';
+import 'package:organic_grow/core/controllers/wishlist_controller.dart';
+import 'package:organic_grow/core/controllers/cart_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
   ProfileScreen({super.key}) {
@@ -10,6 +13,9 @@ class ProfileScreen extends StatelessWidget {
   }
 
   final ProfileController userController = Get.find();
+  OrderController get orderController => Get.isRegistered<OrderController>() ? Get.find<OrderController>() : Get.put(OrderController());
+  WishlistController get wishlistController => Get.isRegistered<WishlistController>() ? Get.find<WishlistController>() : Get.put(WishlistController());
+  CartController get cartController => Get.isRegistered<CartController>() ? Get.find<CartController>() : Get.put(CartController());
 
   @override
   Widget build(BuildContext context) {
@@ -64,19 +70,14 @@ class ProfileScreen extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const SizedBox(width: 40), // Spacer
                             Text(
                               'My Profile',
                               style: AppTypography.h3.copyWith(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                               ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.settings_outlined, color: Colors.white),
-                              onPressed: () => Get.toNamed('/settings'),
                             ),
                           ],
                         ),
@@ -128,25 +129,39 @@ class ProfileScreen extends StatelessWidget {
                                       ),
                                     ],
                                   ),
-                                  child: CircleAvatar(
-                                    radius: 50,
-                                    backgroundColor: AppColor.secondaryColor.withOpacity(0.1),
-                                    child: ClipOval(
-                                      child: Image.asset(
-                                        user.image,
-                                        fit: BoxFit.cover,
-                                        width: 100,
-                                        height: 100,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return const Icon(
-                                            Icons.person_rounded,
-                                            size: 55,
-                                            color: AppColor.primaryColor,
-                                          );
-                                        },
+                                    child: CircleAvatar(
+                                      radius: 50,
+                                      backgroundColor: AppColor.secondaryColor.withOpacity(0.1),
+                                      child: ClipOval(
+                                        child: user.image.startsWith('http')
+                                            ? Image.network(
+                                                user.image,
+                                                fit: BoxFit.cover,
+                                                width: 100,
+                                                height: 100,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return const Icon(
+                                                    Icons.person_rounded,
+                                                    size: 55,
+                                                    color: AppColor.primaryColor,
+                                                  );
+                                                },
+                                              )
+                                            : Image.asset(
+                                                user.image,
+                                                fit: BoxFit.cover,
+                                                width: 100,
+                                                height: 100,
+                                                errorBuilder: (context, error, stackTrace) {
+                                                  return const Icon(
+                                                    Icons.person_rounded,
+                                                    size: 55,
+                                                    color: AppColor.primaryColor,
+                                                  );
+                                                },
+                                              ),
                                       ),
                                     ),
-                                  ),
                                 ),
                                 // Edit camera icon
                                 Container(
@@ -197,7 +212,7 @@ class ProfileScreen extends StatelessWidget {
                           Expanded(
                             child: _buildStatItem(
                               icon: Icons.shopping_bag_outlined,
-                              value: '12',
+                              value: orderController.orders.length.toString(),
                               label: 'Orders',
                               color: AppColor.primaryColor,
                               onTap: () => Get.toNamed('/orders'),
@@ -207,7 +222,7 @@ class ProfileScreen extends StatelessWidget {
                           Expanded(
                             child: _buildStatItem(
                               icon: Icons.favorite_outline_rounded,
-                              value: '5',
+                              value: wishlistController.wishlistItems.length.toString(),
                               label: 'Wishlist',
                               color: const Color(0xFFE91E63),
                               onTap: () => Get.toNamed('/wishlist'),
@@ -216,11 +231,11 @@ class ProfileScreen extends StatelessWidget {
                           const SizedBox(width: 12),
                           Expanded(
                             child: _buildStatItem(
-                              icon: Icons.star_rounded,
-                              value: '350',
-                              label: 'Points',
+                              icon: Icons.shopping_cart_outlined,
+                              value: cartController.cartItems.length.toString(),
+                              label: 'Cart',
                               color: const Color(0xFFFFB300),
-                              onTap: () {},
+                              onTap: () => Get.toNamed('/cart'),
                             ),
                           ),
                         ],

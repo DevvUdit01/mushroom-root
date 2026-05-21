@@ -2,15 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:organic_grow/config/app_color.dart';
 import 'package:organic_grow/config/app_typography.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:organic_grow/core/controllers/offer_controller.dart';
+import 'package:get/get.dart';
 
 class SpecialOffersWidget extends StatelessWidget {
-  const SpecialOffersWidget({super.key});
+  SpecialOffersWidget({super.key});
+
+  final OfferController offerController = Get.isRegistered<OfferController>() 
+      ? Get.find<OfferController>() 
+      : Get.put(OfferController());
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
+    return Obx(() {
+      if (offerController.isLoading.value) {
+        return const SpecialOffersWidgetShimmer();
+      }
+      
+      final offer = offerController.currentOffer.value;
+      if (offer == null) {
+        return const SizedBox(); // Don't show if no offer
+      }
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -81,7 +97,7 @@ class SpecialOffersWidget extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  'LIMITED TIME',
+                                  offer.badgeText,
                                   style: AppTypography.caption.copyWith(
                                     color: Colors.black,
                                     fontWeight: FontWeight.bold,
@@ -90,7 +106,7 @@ class SpecialOffersWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Get 25% OFF',
+                                offer.discountText,
                                 style: AppTypography.h2.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -98,7 +114,7 @@ class SpecialOffersWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'On your first order today!',
+                                offer.description,
                                 style: AppTypography.bodySmall.copyWith(
                                   color: Colors.white.withOpacity(0.85),
                                   fontWeight: FontWeight.w500,
@@ -141,7 +157,8 @@ class SpecialOffersWidget extends StatelessWidget {
         ],
       ),
     );
-  }
+  });
+}
 }
 
 class SpecialOffersWidgetShimmer extends StatelessWidget {

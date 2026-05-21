@@ -9,7 +9,7 @@ import 'package:shimmer/shimmer.dart';
 class CategoriesSectionWidget extends StatelessWidget {
   CategoriesSectionWidget({super.key});
 
-  final HomeController homeController = Get.put(HomeController());
+  final HomeController homeController = Get.find<HomeController>();
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +23,8 @@ class CategoriesSectionWidget extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Explore Categories 🌿',
-                style: AppTypography.h4.copyWith(
+                "What's on your mind? 🌿",
+                style: AppTypography.h3.copyWith(
                   fontWeight: FontWeight.bold,
                   color: AppColor.textColor,
                 ),
@@ -49,7 +49,9 @@ class CategoriesSectionWidget extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
+        
+        // Zomato style Single-Row circular categories horizontal scrolling list
         SizedBox(
           height: 110,
           child: ListView.builder(
@@ -62,58 +64,59 @@ class CategoriesSectionWidget extends StatelessWidget {
               final icon = _getIconFromString(category.icon);
 
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Column(
-                  children: [
-                    // Premium tapable category icon card
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Theme.of(context).dividerColor, width: 1.2),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF1B5E20).withOpacity(0.02),
-                            blurRadius: 8,
-                            offset: const Offset(0, 4),
+                padding: const EdgeInsets.only(right: 16),
+                child: GestureDetector(
+                  onTap: () => Get.toNamed('/category-products', arguments: {'category': category}),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Premium tapable category icon card (circular)
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: Colors.grey[100]!,
+                            width: 1,
                           ),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => Get.toNamed('/category-products', arguments: {'category': category}),
-                          borderRadius: BorderRadius.circular(20),
-                          splashColor: AppColor.primaryColor.withOpacity(0.08),
+                        ),
+                        child: Center(
                           child: Container(
-                            width: 64,
-                            height: 64,
-                            alignment: Alignment.center,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColor.primaryColor.withOpacity(0.08),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                icon,
-                                color: AppColor.primaryColor,
-                                size: 24,
-                              ),
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: AppColor.primaryColor.withOpacity(0.06),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              icon,
+                              color: AppColor.primaryColor,
+                              size: 24,
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      category.name,
-                      style: AppTypography.caption.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColor.textColor.withOpacity(0.7),
+                      const SizedBox(height: 6),
+                      Text(
+                        category.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColor.textColor.withOpacity(0.8),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -159,32 +162,32 @@ class CategoriesSectionWidgetShimmer extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 16),
         SizedBox(
           height: 110,
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             scrollDirection: Axis.horizontal,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: 5,
+            itemCount: 6,
             itemBuilder: (context, index) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: Shimmer.fromColors(
-                  baseColor: Colors.grey[300]!,
-                  highlightColor: Colors.grey[100]!,
+              return Shimmer.fromColors(
+                baseColor: Colors.grey[300]!,
+                highlightColor: Colors.grey[100]!,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16),
                   child: Column(
                     children: [
                       Container(
                         width: 64,
                         height: 64,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+                          shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Container(width: 40, height: 10, color: Colors.white),
+                      const SizedBox(height: 6),
+                      Container(width: 45, height: 10, color: Colors.white),
                     ],
                   ),
                 ),

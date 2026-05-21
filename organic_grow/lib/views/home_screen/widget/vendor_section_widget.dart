@@ -43,13 +43,32 @@ class VendorSectionWidget extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+
+        // Scrollable Zomato-style filter pills
+        SizedBox(
+          height: 38,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            children: [
+              _buildFilterChip('All Stores', ''),
+              _buildFilterChip('Nearest 📍', 'nearest'),
+              _buildFilterChip('Rating 4.0+ ⭐', 'rating'),
+              _buildFilterChip('Open Now 🟢', 'open'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
         Obx(() {
-          if (homeController.vendors.isEmpty) {
+          if (homeController.filteredVendors.isEmpty) {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
                 padding: const EdgeInsets.all(32),
+                width: double.infinity,
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(20),
@@ -61,7 +80,7 @@ class VendorSectionWidget extends StatelessWidget {
                       Icon(Icons.store_rounded, size: 48, color: AppColor.greyColor),
                       const SizedBox(height: 12),
                       Text(
-                        'No stores available nearby',
+                        'No stores match the active filter',
                         style: AppTypography.bodyMedium.copyWith(color: AppColor.greyColor),
                       ),
                     ],
@@ -75,14 +94,56 @@ class VendorSectionWidget extends StatelessWidget {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            itemCount: homeController.vendors.length,
+            itemCount: homeController.filteredVendors.length,
             itemBuilder: (context, index) {
-              return _VendorCard(vendor: homeController.vendors[index]);
+              return _VendorCard(vendor: homeController.filteredVendors[index]);
             },
           );
         }),
       ],
     );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    return Obx(() {
+      final isSelected = homeController.selectedFilter.value == value;
+      return GestureDetector(
+        onTap: () {
+          homeController.selectedFilter.value = value;
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColor.primaryColor : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? AppColor.primaryColor : Colors.grey[200]!,
+              width: 1.2,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppColor.primaryColor.withOpacity(0.15),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    )
+                  ]
+                : [],
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: AppTypography.caption.copyWith(
+                color: isSelected ? Colors.white : AppColor.textColor.withOpacity(0.8),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      );
+    });
   }
 }
 
@@ -108,8 +169,8 @@ class _VendorCard extends StatelessWidget {
           border: Border.all(color: Theme.of(context).dividerColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 12,
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
               offset: const Offset(0, 4),
             ),
           ],
@@ -124,7 +185,7 @@ class _VendorCard extends StatelessWidget {
                 topRight: Radius.circular(20),
               ),
               child: SizedBox(
-                height: 140,
+                height: 150,
                 width: double.infinity,
                 child: shopImageUrl.isNotEmpty
                     ? Image.network(
@@ -175,7 +236,7 @@ class _VendorCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
 
-                  // Row 2: Rating, Delivery time, Min order
+                  // Row 2: Rating, Delivery time, Distance (Hiding delivery charge)
                   Row(
                     children: [
                       // Rating
@@ -211,13 +272,26 @@ class _VendorCard extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(width: 12),
+
+                      // Distance display (If available)
+                      if (vendor.distance != null) ...[
+                        const SizedBox(width: 12),
+                        Icon(Icons.directions_walk_rounded, size: 14, color: AppColor.greyColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${vendor.distance!.toStringAsFixed(1)} km',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColor.greyColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 10),
 
                   // Row 3: Cuisine tags
-                  if (vendor.cuisineTags.isNotEmpty)
+                  if (vendor.cuisineTags.isNotEmpty) ...[
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
@@ -238,10 +312,11 @@ class _VendorCard extends StatelessWidget {
                         );
                       }).toList(),
                     ),
+                    const SizedBox(height: 8),
+                  ],
 
                   // Address
-                  if (vendor.fullAddress.isNotEmpty) ...[
-                    const SizedBox(height: 8),
+                  if (vendor.fullAddress.isNotEmpty)
                     Row(
                       children: [
                         Icon(Icons.location_on_outlined, size: 14, color: AppColor.greyColor),
@@ -258,7 +333,6 @@ class _VendorCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ],
                 ],
               ),
             ),

@@ -7,6 +7,8 @@ import 'package:geocoding/geocoding.dart';
 
 class ProfileController extends GetxController {
   var isLoading = false.obs;
+  var latitude = 0.0.obs;
+  var longitude = 0.0.obs;
 
   var user = User(
     id: '1',
@@ -71,6 +73,8 @@ class ProfileController extends GetxController {
         return;
       }
       print("📍 [Location Flow] Coordinates obtained: Lat: ${position.latitude}, Lon: ${position.longitude}");
+      latitude.value = position.latitude;
+      longitude.value = position.longitude;
 
       print("📍 [Location Flow] Reverse Geocoding coordinates...");
       List<Placemark> placemarks;
@@ -140,6 +144,17 @@ class ProfileController extends GetxController {
         final addressData = userData['address'];
         print("📍 [Location Flow] Raw addressData from DB: $addressData");
         if (addressData != null && addressData is Map) {
+          double parsedLat = 0.0;
+          double parsedLng = 0.0;
+          final locationData = addressData['location'];
+          if (locationData != null && locationData is Map) {
+            parsedLat = (locationData['latitude'] as num?)?.toDouble() ?? 0.0;
+            parsedLng = (locationData['longitude'] as num?)?.toDouble() ?? 0.0;
+          }
+          latitude.value = parsedLat;
+          longitude.value = parsedLng;
+          print("📍 [Location Flow] Parsed backend coordinates: Lat: $parsedLat, Lon: $parsedLng");
+
           final fullAddr = addressData['fullAddress'] ?? '';
           final city = addressData['city'] ?? '';
           final stateStr = addressData['state'] ?? '';
@@ -159,6 +174,16 @@ class ProfileController extends GetxController {
         }
         print("📍 [Location Flow] Parsed addressString: $addressString");
 
+        String imagePath = (userData['profileImage'] != null && userData['profileImage'].toString().trim().isNotEmpty) 
+            ? userData['profileImage'].toString() 
+            : 'assets/user_profile.jpg';
+        
+        if (imagePath.isNotEmpty && !imagePath.startsWith('http') && !imagePath.startsWith('assets/')) {
+          // Normalize backslashes (Windows) to forward slashes
+          imagePath = imagePath.replaceAll('\\', '/');
+          imagePath = '${ApiService.imageBaseUrl}$imagePath';
+        }
+
         // Map backend User schema onto core/models/user_model
         final mappedUser = User(
           id: userData['_id'] ?? '',
@@ -170,9 +195,7 @@ class ProfileController extends GetxController {
               : 'no-email@organicgrow.com',
           phone: userData['phone']?.toString() ?? '',
           address: addressString,
-          image: (userData['profileImage'] != null && userData['profileImage'].toString().trim().isNotEmpty) 
-              ? userData['profileImage'].toString() 
-              : 'assets/user_profile.jpg',
+          image: imagePath,
           role: userData['role'] ?? 'customer',
         );
 
@@ -190,12 +213,36 @@ class ProfileController extends GetxController {
     user.value = newUser;
   }
 
-  void updateProfile(String name, String email, String phone, String address) {
-    user.update((val) {
-      val!.name = name;
-      val.email = email;
-      val.phone = phone;
-      val.address = address;
-    });
+  /// Persists profile changes (name, email) to backend via API
+  Future<void> updateProfile(String name, String email) async {
+    try {
+      isLoading.value = true;
+      final response = await ApiService.updateProfile(name: name, email: email);
+      if (response['success'] == true) {
+        // Refresh local state from backend
+        await fetchUserProfile();
+      }
+    } catch (e) {
+      debugPrint('Failed to update profile: $e');
+      rethrow; // Let the screen handle it for snackbar
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Uploads a profile photo and refreshes user state
+  Future<void> uploadProfilePhoto(String filePath) async {
+    try {
+      isLoading.value = true;
+      final response = await ApiService.uploadProfilePhoto(filePath);
+      if (response['success'] == true) {
+        await fetchUserProfile();
+      }
+    } catch (e) {
+      debugPrint('Failed to upload profile photo: $e');
+      rethrow;
+    } finally {
+      isLoading.value = false;
+    }
   }
 }

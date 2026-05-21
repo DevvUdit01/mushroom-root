@@ -8,6 +8,7 @@ import 'package:organic_grow/core/controllers/connectivity_controller.dart';
 import 'package:organic_grow/core/controllers/home_page_controller.dart';
 import 'package:organic_grow/core/controllers/profile_controller.dart';
 import 'package:organic_grow/core/controllers/settings_controller.dart';
+import 'package:organic_grow/core/controllers/wishlist_controller.dart';
 
 
 
@@ -18,6 +19,7 @@ class DashBoardScreen extends GetView<DashBoardController> {
     Get.lazyPut<HomeController>(() => HomeController());
     Get.lazyPut<SettingsController>(() => SettingsController());
     Get.lazyPut<CartController>(() => CartController());
+    Get.lazyPut<WishlistController>(() => WishlistController());
     
     Get.put(ConnectivityController()); // inject connectivity controller
   }

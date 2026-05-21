@@ -163,6 +163,14 @@ class VendorStoreScreen extends StatelessWidget {
                               iconColor: AppColor.primaryColor,
                               text: vendor.deliveryTime,
                             ),
+                            if (vendor.distance != null) ...[
+                              const SizedBox(width: 16),
+                              _infoChip(
+                                icon: Icons.directions_walk_rounded,
+                                iconColor: AppColor.primaryColor,
+                                text: '${vendor.distance!.toStringAsFixed(1)} km away',
+                              ),
+                            ],
                           ],
                         ),
 
@@ -430,165 +438,168 @@ class _ProductMenuCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final CartController cartController = Get.find<CartController>();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Product Image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(
-              width: 90,
-              height: 90,
-              child: product.image.isNotEmpty
-                  ? Image.network(
-                      product.image,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+    return GestureDetector(
+      onTap: () => Get.toNamed('/product-detail', arguments: product),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Product Image
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 90,
+                height: 90,
+                child: product.image.isNotEmpty
+                    ? Image.network(
+                        product.image,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(
+                          color: AppColor.primaryColor.withOpacity(0.1),
+                          child: Icon(Icons.image_rounded, size: 32, color: AppColor.greyColor),
+                        ),
+                      )
+                    : Container(
                         color: AppColor.primaryColor.withOpacity(0.1),
                         child: Icon(Icons.image_rounded, size: 32, color: AppColor.greyColor),
                       ),
-                    )
-                  : Container(
-                      color: AppColor.primaryColor.withOpacity(0.1),
-                      child: Icon(Icons.image_rounded, size: 32, color: AppColor.greyColor),
-                    ),
+              ),
             ),
-          ),
-          const SizedBox(width: 14),
+            const SizedBox(width: 14),
 
-          // Product Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product.name,
-                  style: AppTypography.h5.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AppColor.textColor,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  product.weight.isNotEmpty ? product.weight : '1 ${product.unit}',
-                  style: AppTypography.caption.copyWith(color: AppColor.greyColor),
-                ),
-                const SizedBox(height: 8),
-
-                // Price row + Add button
-                Row(
-                  children: [
-                    Text(
-                      '₹${product.price.toStringAsFixed(0)}',
-                      style: AppTypography.h5.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppColor.primaryColor,
-                      ),
+            // Product Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: AppTypography.h5.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColor.textColor,
                     ),
-                    if (product.mrpPrice > 0 && product.mrpPrice > product.price) ...[
-                      const SizedBox(width: 6),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    product.weight.isNotEmpty ? product.weight : '1 ${product.unit}',
+                    style: AppTypography.caption.copyWith(color: AppColor.greyColor),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Price row + Add button
+                  Row(
+                    children: [
                       Text(
-                        '₹${product.mrpPrice.toStringAsFixed(0)}',
-                        style: AppTypography.caption.copyWith(
-                          color: AppColor.greyColor,
-                          decoration: TextDecoration.lineThrough,
+                        '₹${product.price.toStringAsFixed(0)}',
+                        style: AppTypography.h5.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColor.primaryColor,
                         ),
                       ),
-                    ],
-                    const Spacer(),
-
-                    // Add / Quantity buttons
-                    Obx(() {
-                      final qty = cartController.getProductQuantity(product.id);
-                      if (qty == 0) {
-                        return GestureDetector(
-                          onTap: () {
-                            if (!product.isAvailable) {
-                              Get.snackbar('Unavailable', '${product.name} is currently out of stock',
-                                  snackPosition: SnackPosition.BOTTOM);
-                              return;
-                            }
-                            cartController.addToCart(CartItem(
-                              id: product.id,
-                              name: product.name,
-                              price: product.price,
-                              image: product.image,
-                              quantity: 1,
-                              vendorId: vendorId,
-                              vendorName: vendorName,
-                              unit: product.unit,
-                            ));
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppColor.primaryColor,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              'ADD',
-                              style: AppTypography.buttonSmall.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                      if (product.mrpPrice > 0 && product.mrpPrice > product.price) ...[
+                        const SizedBox(width: 6),
+                        Text(
+                          '₹${product.mrpPrice.toStringAsFixed(0)}',
+                          style: AppTypography.caption.copyWith(
+                            color: AppColor.greyColor,
+                            decoration: TextDecoration.lineThrough,
                           ),
-                        );
-                      }
-
-                      // Quantity stepper
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: AppColor.primaryColor,
-                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: () => cartController.decreaseQuantity(product.id),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                child: Icon(Icons.remove, color: Colors.white, size: 18),
+                      ],
+                      const Spacer(),
+
+                      // Add / Quantity buttons
+                      Obx(() {
+                        final qty = cartController.getProductQuantity(product.id);
+                        if (qty == 0) {
+                          return GestureDetector(
+                            onTap: () {
+                              if (!product.isAvailable) {
+                                Get.snackbar('Unavailable', '${product.name} is currently out of stock',
+                                    snackPosition: SnackPosition.BOTTOM);
+                                return;
+                              }
+                              cartController.addToCart(CartItem(
+                                id: product.id,
+                                name: product.name,
+                                price: product.price,
+                                image: product.image,
+                                quantity: 1,
+                                vendorId: vendorId,
+                                vendorName: vendorName,
+                                unit: product.unit,
+                              ));
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColor.primaryColor,
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
                               child: Text(
-                                '$qty',
+                                'ADD',
                                 style: AppTypography.buttonSmall.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                            GestureDetector(
-                              onTap: () => cartController.increaseQuantity(product.id),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                child: Icon(Icons.add, color: Colors.white, size: 18),
+                          );
+                        }
+
+                        // Quantity stepper
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: AppColor.primaryColor,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              GestureDetector(
+                                onTap: () => cartController.decreaseQuantity(product.id),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  child: Icon(Icons.remove, color: Colors.white, size: 18),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                ),
-              ],
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: Text(
+                                  '$qty',
+                                  style: AppTypography.buttonSmall.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => cartController.increaseQuantity(product.id),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  child: Icon(Icons.add, color: Colors.white, size: 18),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

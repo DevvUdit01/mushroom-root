@@ -17,12 +17,11 @@ class HomeScreen extends GetView<HomeController> {
 
   final HomeController homeController = Get.put(HomeController());
   final ProfileController profileController = Get.put(ProfileController());
-  final RxBool isSearchExpanded = false.obs;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor, // Cohesive organic background
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SmartRefresher(
         controller: homeController.refreshController, 
         onRefresh: homeController.refreshData,        
@@ -34,22 +33,22 @@ class HomeScreen extends GetView<HomeController> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. Beautiful Gradient Custom Header (No standard AppBar)
+              // 1. Zomato-Style Premium Location & Search Header
               _buildHeader(context),
               
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               
               // 2. Carousel Slider
               Obx(() => _buildCarouselSlider()),
               
               const SizedBox(height: 24),
               
-              // 3. Categories Horizontal Section
+              // 3. Double-Row Categories Grid ("What's on your mind?")
               Obx(() => _buildCategoriesSection()),
               
               const SizedBox(height: 24),
 
-              // 4. Nearby Stores Section (Zomato-style vendor cards)
+              // 4. Nearby Stores Section (Zomato-style vendor cards with filter row)
               Obx(() => _buildVendorSection()),
               
               const SizedBox(height: 24),
@@ -70,217 +69,198 @@ class HomeScreen extends GetView<HomeController> {
     );
   }
 
-  // Premium Header with dynamic personalization & search bar
+  // Zomato style neutral header with red location pin, dynamic location text & profile image
   Widget _buildHeader(BuildContext context) {
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Color(0xFF1B5E20), // Jungle Green
-            Color(0xFF4CAF50), // Fresh Emerald Green
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+      padding: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(28),
+          bottomRight: Radius.circular(28),
         ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(32),
-          bottomRight: Radius.circular(32),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Stack(
-        children: [
-          // Translucent background circles for premium texture
-          Positioned(
-            top: -40,
-            right: -30,
-            child: CircleAvatar(
-              radius: 90,
-              backgroundColor: Colors.white.withOpacity(0.07),
-            ),
-          ),
-          Positioned(
-            bottom: -20,
-            left: -20,
-            child: CircleAvatar(
-              radius: 60,
-              backgroundColor: Colors.white.withOpacity(0.04),
-            ),
-          ),
-          // Header Content
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Row: Location + Profile Action
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        // Tapping location manually requests GPS updates
+                        profileController.fetchAndSaveCurrentLocation();
+                      },
+                      child: Row(
                         children: [
-                          Text(
-                            'Fresh & Organic 🌿',
-                            style: AppTypography.caption.copyWith(
-                              color: Colors.white.withOpacity(0.7),
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
+                          const Icon(
+                            Icons.location_on_rounded,
+                            color: Colors.redAccent,
+                            size: 28,
                           ),
-                          const SizedBox(height: 4),
-                           Obx(() {
-                            final user = profileController.user.value;
-                            final firstName = user.name.isNotEmpty ? user.name.split(' ')[0] : 'Guest';
-                            return Column(
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Hello, $firstName! 👋',
-                                  style: AppTypography.h2.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
                                 Row(
-                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(
-                                      Icons.location_on_rounded,
-                                      color: Colors.white,
-                                      size: 14,
+                                    Text(
+                                      'Deliver to',
+                                      style: AppTypography.caption.copyWith(
+                                        color: Colors.grey[500],
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.5,
+                                      ),
                                     ),
                                     const SizedBox(width: 4),
-                                    SizedBox(
-                                      width: 180, // Bound width to ensure text truncates gracefully
-                                      child: Text(
-                                        user.address.isNotEmpty ? user.address : 'Locating...',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: AppTypography.caption.copyWith(
-                                          color: Colors.white.withOpacity(0.9),
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
+                                    Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: Colors.grey[600],
+                                      size: 16,
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 2),
+                                Obx(() {
+                                  final user = profileController.user.value;
+                                  return Text(
+                                    user.address.isNotEmpty ? user.address : 'Locating...',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.bodyMedium.copyWith(
+                                      color: AppColor.textColor,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  );
+                                }),
                               ],
-                            );
-                          }),
-                        ],
-                      ),
-                      // Top Action Icons
-                      Row(
-                        children: [
-                          _buildHeaderIconButton(
-                            icon: Icons.search_rounded,
-                            onTap: () {
-                              isSearchExpanded.value =
-                                  !isSearchExpanded.value;
-                            },
-                          ),
-                          const SizedBox(width: 8),
-                          _buildHeaderIconButton(
-                            icon: Icons.favorite_rounded,
-                            onTap: () => Get.to(() => const WishlistScreen()),
+                            ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
+                  const SizedBox(width: 16),
+                  // Heart / Wishlist icon
+                  GestureDetector(
+                    onTap: () => Get.to(() => const WishlistScreen()),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.favorite_rounded,
+                        color: Colors.redAccent,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Profile Photo
                   Obx(() {
-                    if (isSearchExpanded.value) {
-                      return const SizedBox(height: 18);
-                    }
-                    return const SizedBox();
+                    final user = profileController.user.value;
+                    final hasProfileImage = user.image.isNotEmpty && !user.image.contains('assets/');
+                    return Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColor.primaryColor.withOpacity(0.2),
+                          width: 2,
+                        ),
+                      ),
+                      child: CircleAvatar(
+                        radius: 18,
+                        backgroundColor: Colors.grey[200],
+                        backgroundImage: hasProfileImage
+                            ? NetworkImage(user.image)
+                            : const AssetImage('assets/user_profile.jpg') as ImageProvider,
+                      ),
+                    );
                   }),
-                  // Integrated Search Bar
-                  _buildSearchBar(),
                 ],
               ),
+              const SizedBox(height: 18),
+              
+              // Always visible sticky-style Search Bar
+              _buildSearchBar(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBar(BuildContext context) {
+    return Container(
+      height: 50,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey[200]!,
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.01),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.search_rounded, color: Colors.grey, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextField(
+              readOnly: true,
+              onTap: () {
+                Get.toNamed('/search');
+              },
+              decoration: InputDecoration(
+                hintText: "Search 'organic fruits', 'fresh veggies'...",
+                hintStyle: AppTypography.bodyMedium.copyWith(
+                  color: Colors.grey[400],
+                  fontWeight: FontWeight.w500,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: AppColor.primaryColor.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.tune_rounded,
+              color: AppColor.primaryColor,
+              size: 18,
             ),
           ),
         ],
       ),
     );
-  }
-
-  Widget _buildHeaderIconButton({required IconData icon, required VoidCallback onTap}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        shape: BoxShape.circle,
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: Colors.white, size: 22),
-        onPressed: onTap,
-        constraints: const BoxConstraints(),
-        padding: const EdgeInsets.all(8),
-      ),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Obx(() {
-      final isExpanded = isSearchExpanded.value;
-      return AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        height: isExpanded ? 52 : 0,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.06),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 200),
-          opacity: isExpanded ? 1.0 : 0.0,
-          child: isExpanded
-              ? Row(
-                  children: [
-                    const Icon(Icons.search_rounded, color: AppColor.primaryColor, size: 24),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        autofocus: true,
-                        decoration: InputDecoration(
-                          hintText: 'Search organic fruits, veggies...',
-                          hintStyle: AppTypography.bodyMedium.copyWith(
-                            color: Colors.grey[400],
-                            fontWeight: FontWeight.w500,
-                          ),
-                          border: InputBorder.none,
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: AppColor.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.tune_rounded,
-                        color: AppColor.primaryColor,
-                        size: 20,
-                      ),
-                    ),
-                  ],
-                )
-              : const SizedBox(),
-        ),
-      );
-    });
   }
 
   Widget _buildCarouselSlider() =>
@@ -296,5 +276,5 @@ class HomeScreen extends GetView<HomeController> {
       homeController.isLoading.value ? const FeaturedProductWidgetShimmer() : FeaturedProductWidget();
 
   Widget _buildSpecialOffersSection() =>
-      homeController.isLoading.value ? const SpecialOffersWidgetShimmer() : const SpecialOffersWidget();
+      homeController.isLoading.value ? const SpecialOffersWidgetShimmer() : SpecialOffersWidget();
 }

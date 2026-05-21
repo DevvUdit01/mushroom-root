@@ -14,10 +14,18 @@ class AllVendorsScreen extends StatefulWidget {
 }
 
 class _AllVendorsScreenState extends State<AllVendorsScreen> {
-  final HomeController homeController = Get.find<HomeController>();
+  late final HomeController homeController;
   final TextEditingController searchController = TextEditingController();
   final RxString searchQuery = ''.obs;
   final RxString selectedTag = 'All'.obs;
+
+  @override
+  void initState() {
+    super.initState();
+    homeController = Get.isRegistered<HomeController>()
+        ? Get.find<HomeController>()
+        : Get.put(HomeController());
+  }
 
   // List of tags extracted from all vendors
   List<String> get tags {
@@ -293,6 +301,18 @@ class _AllVendorsScreenState extends State<AllVendorsScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 12),
+                                    if (vendor.distance != null) ...[
+                                      const SizedBox(width: 12),
+                                      Icon(Icons.directions_walk_rounded, size: 14, color: AppColor.greyColor),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${vendor.distance!.toStringAsFixed(1)} km',
+                                        style: AppTypography.caption.copyWith(
+                                          color: AppColor.greyColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                                 if (vendor.cuisineTags.isNotEmpty) ...[
