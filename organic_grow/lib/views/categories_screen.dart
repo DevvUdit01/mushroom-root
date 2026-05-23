@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:organic_grow/config/app_color.dart';
 import 'package:organic_grow/config/app_typography.dart';
 import 'package:organic_grow/core/controllers/home_page_controller.dart';
@@ -68,44 +69,48 @@ class CategoriesScreen extends StatelessWidget {
       ),
       itemCount: 6,
       itemBuilder: (context, index) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Theme.of(context).dividerColor, width: 1),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor,
-                    shape: BoxShape.circle,
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Theme.of(context).dividerColor, width: 1),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  width: 80,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor,
-                    borderRadius: BorderRadius.circular(4),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: 80,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: 50,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).dividerColor,
-                    borderRadius: BorderRadius.circular(4),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 50,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -153,10 +158,24 @@ class CategoriesScreen extends StatelessWidget {
                       width: 1.5,
                     ),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 32,
-                    color: AppColor.primaryColor,
+                  child: ClipOval(
+                    child: category.image != null && category.image!.isNotEmpty
+                        ? Image.network(
+                            category.image!,
+                            width: 70,
+                            height: 70,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(
+                              icon,
+                              size: 32,
+                              color: AppColor.primaryColor,
+                            ),
+                          )
+                        : Icon(
+                            icon,
+                            size: 32,
+                            color: AppColor.primaryColor,
+                          ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -178,7 +197,7 @@ class CategoriesScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Text(
-                    '${_getRandomProductCount()} items',
+                    '${category.itemCount} items',
                     style: AppTypography.caption.copyWith(
                       color: AppColor.primaryColor,
                       fontWeight: FontWeight.bold,
@@ -191,10 +210,6 @@ class CategoriesScreen extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  int _getRandomProductCount() {
-    return 15 + (DateTime.now().millisecondsSinceEpoch % 25);
   }
 
   void _navigateToCategoryProducts(Category category) {

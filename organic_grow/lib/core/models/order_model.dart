@@ -28,7 +28,7 @@ class OrderItem {
       if (imgs is List && imgs.isNotEmpty) {
         image = imgs[0].toString().replaceAll('\\', '/');
         if (!image.startsWith('http')) {
-          image = 'http://192.168.1.15:5000/$image';
+          image = 'http://192.168.1.12:5000/$image';
         }
       }
       price = ((prod['sellingPrice'] ?? prod['mrpPrice'] ?? json['price']) as num).toDouble();
@@ -48,6 +48,7 @@ class OrderItem {
 
 class AppOrder {
   final String id;
+  final String vendorId;
   final String vendorName;
   final String vendorImage;
   final List<OrderItem> items;
@@ -57,9 +58,19 @@ class AppOrder {
   final String paymentMethod;
   final String paymentStatus;
   final DateTime createdAt;
+  final String? pickupOTP;
+  final String? orderOTP;
+  final String? deliveryPartnerName;
+  final String? deliveryPartnerPhone;
+  final String? deliveryPartnerVehicleType;
+  final String? deliveryPartnerVehicleNumber;
+  final String? deliveryPartnerProfileImage;
+  final double? deliveryPartnerLatitude;
+  final double? deliveryPartnerLongitude;
 
   AppOrder({
     required this.id,
+    required this.vendorId,
     required this.vendorName,
     required this.vendorImage,
     required this.items,
@@ -69,6 +80,15 @@ class AppOrder {
     required this.paymentMethod,
     required this.paymentStatus,
     required this.createdAt,
+    this.pickupOTP,
+    this.orderOTP,
+    this.deliveryPartnerName,
+    this.deliveryPartnerPhone,
+    this.deliveryPartnerVehicleType,
+    this.deliveryPartnerVehicleNumber,
+    this.deliveryPartnerProfileImage,
+    this.deliveryPartnerLatitude,
+    this.deliveryPartnerLongitude,
   });
 
   int get totalItemCount => items.fold(0, (sum, i) => sum + i.quantity);
@@ -85,8 +105,31 @@ class AppOrder {
     final List<dynamic> rawItems = json['products'] ?? [];
     final items = rawItems.map((p) => OrderItem.fromJson(p as Map<String, dynamic>)).toList();
 
+    final partner = json['deliveryPartnerId'];
+    String? dpName;
+    String? dpPhone;
+    String? dpVehicleType;
+    String? dpVehicleNumber;
+    String? dpProfileImage;
+    double? dpLat;
+    double? dpLng;
+
+    if (partner is Map<String, dynamic>) {
+      dpName = partner['name'];
+      dpPhone = partner['phone'];
+      dpVehicleType = partner['vehicleType'];
+      dpVehicleNumber = partner['vehicleNumber'];
+      dpProfileImage = partner['profileImage'];
+      final loc = partner['currentLocation'];
+      if (loc is Map<String, dynamic>) {
+        dpLat = (loc['latitude'] as num?)?.toDouble();
+        dpLng = (loc['longitude'] as num?)?.toDouble();
+      }
+    }
+
     return AppOrder(
       id: json['_id'] ?? '',
+      vendorId: (vendor is Map<String, dynamic>) ? (vendor['_id'] ?? '') : '',
       vendorName: vendorName,
       vendorImage: vendorImage,
       items: items,
@@ -96,6 +139,15 @@ class AppOrder {
       paymentMethod: json['paymentMethod'] ?? 'cod',
       paymentStatus: json['paymentStatus'] ?? 'pending',
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
+      pickupOTP: json['pickupOTP']?.toString(),
+      orderOTP: json['orderOTP']?.toString(),
+      deliveryPartnerName: dpName,
+      deliveryPartnerPhone: dpPhone,
+      deliveryPartnerVehicleType: dpVehicleType,
+      deliveryPartnerVehicleNumber: dpVehicleNumber,
+      deliveryPartnerProfileImage: dpProfileImage,
+      deliveryPartnerLatitude: dpLat,
+      deliveryPartnerLongitude: dpLng,
     );
   }
 }

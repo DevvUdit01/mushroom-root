@@ -7,6 +7,8 @@ import 'package:organic_grow/core/models/cart_item_model.dart';
 import 'package:organic_grow/core/models/product_model.dart';
 import 'package:organic_grow/core/controllers/home_page_controller.dart';
 import 'package:organic_grow/core/controllers/wishlist_controller.dart';
+import 'package:organic_grow/core/services/api_services.dart';
+import 'package:organic_grow/views/home_screen/widget/featured_product_widget.dart';
 
 class ProductListScreen extends StatelessWidget {
   ProductListScreen({super.key});
@@ -84,20 +86,20 @@ class ProductListScreen extends StatelessWidget {
           borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
         ),
       ),
-      body: Obx(() {
-        // Retrieve real database products filtered by categoryId
-        var displayProducts = homeController.featuredProducts.where((p) {
-          return p.categoryId == categoryId;
-        }).toList();
+      body: FutureBuilder<List<Product>>(
+        future: categoryId.isNotEmpty 
+            ? ApiService.fetchProductsByCategory(categoryId)
+            : Future.value([]),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const FeaturedProductWidgetShimmer();
+          }
 
-        // Fallback to mock products if database is empty for this category
-        if (displayProducts.isEmpty) {
-          displayProducts = categoryProducts[categoryName] ?? [];
-        }
+          var displayProducts = snapshot.data ?? [];
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Sub-header collection count badge
             Padding(
               padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 8),

@@ -22,6 +22,9 @@ import 'package:organic_grow/views/sub_pages/terms_of_service_screen.dart';
 import 'package:organic_grow/views/sub_pages/about_app_screen.dart';
 import 'package:organic_grow/views/sub_pages/checkout_screen.dart';
 import 'package:organic_grow/views/sub_pages/order_success_screen.dart';
+import 'package:organic_grow/views/sub_pages/write_review_screen.dart';
+import 'package:organic_grow/views/sub_pages/track_order_screen.dart';
+import 'package:organic_grow/views/search_screen.dart';
 
 final List<GetPage> getPages = [
   GetPage( 
@@ -127,6 +130,21 @@ final List<GetPage> getPages = [
   GetPage(
     name: '/order-success',
     page: () => const OrderSuccessScreen(),
+    transition: Transition.fadeIn,
+  ),
+  GetPage(
+    name: '/write-review',
+    page: () => const WriteReviewScreen(),
+    transition: Transition.rightToLeft,
+  ),
+  GetPage(
+    name: '/track-order',
+    page: () => const TrackOrderScreen(),
+    transition: Transition.rightToLeft,
+  ),
+  GetPage(
+    name: '/search',
+    page: () => SearchScreen(),
     transition: Transition.fadeIn,
   ),
 ];

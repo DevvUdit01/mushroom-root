@@ -68,47 +68,74 @@ class FeaturedProductWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Featured Products 🌟',
-                style: AppTypography.h4.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppColor.textColor,
-                ),
-              ),
-              Text(
-                'Healthy Picks',
-                style: AppTypography.caption.copyWith(
-                  color: AppColor.primaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Obx(() {
-            final displayProducts = homeController.featuredProducts.isNotEmpty
-                ? homeController.featuredProducts.toList()
-                : mockFeaturedProducts;
+    return Obx(() {
+      if (homeController.vendors.isEmpty) {
+        return const SizedBox.shrink();
+      }
 
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 14,
-                mainAxisSpacing: 14,
-                childAspectRatio: 0.65,
-              ),
-              itemCount: displayProducts.length,
-              itemBuilder: (context, index) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Featured Products 🌟',
+                  style: AppTypography.h4.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColor.textColor,
+                  ),
+                ),
+                Text(
+                  'Healthy Picks',
+                  style: AppTypography.caption.copyWith(
+                    color: AppColor.primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Builder(builder: (context) {
+              final displayProducts = homeController.featuredProducts.toList();
+
+              if (displayProducts.isEmpty) {
+                return Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 48, color: AppColor.greyColor),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No featured products currently available',
+                          style: AppTypography.bodyMedium.copyWith(color: AppColor.greyColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 14,
+                  mainAxisSpacing: 14,
+                  childAspectRatio: 0.65,
+                ),
+                itemCount: displayProducts.length,
+                itemBuilder: (context, index) {
                 final product = displayProducts[index];
               
               // Resolve vendor name dynamically if empty
@@ -380,6 +407,7 @@ class FeaturedProductWidget extends StatelessWidget {
         ],
       ),
     );
+    });
   }
 }
 

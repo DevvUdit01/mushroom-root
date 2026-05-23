@@ -4,12 +4,13 @@ import 'package:organic_grow/config/app_color.dart';
 import 'package:organic_grow/config/app_typography.dart';
 import 'package:organic_grow/core/controllers/home_page_controller.dart';
 import 'package:organic_grow/core/controllers/profile_controller.dart';
+import 'package:organic_grow/core/controllers/checkout_controller.dart';
+import 'package:organic_grow/views/sub_pages/add_address_with_map_screen.dart';
 import 'package:organic_grow/views/home_screen/widget/carousel_slider_widget.dart';
 import 'package:organic_grow/views/home_screen/widget/categories_section_widget.dart';
 import 'package:organic_grow/views/home_screen/widget/featured_product_widget.dart';
 import 'package:organic_grow/views/home_screen/widget/special_offer.dart';
 import 'package:organic_grow/views/home_screen/widget/vendor_section_widget.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:organic_grow/views/sub_pages/wishlist_screen.dart';
 
 class HomeScreen extends GetView<HomeController> {
@@ -17,19 +18,21 @@ class HomeScreen extends GetView<HomeController> {
 
   final HomeController homeController = Get.put(HomeController());
   final ProfileController profileController = Get.put(ProfileController());
+  final CheckoutController checkoutController = Get.isRegistered<CheckoutController>()
+      ? Get.find<CheckoutController>()
+      : Get.put(CheckoutController());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SmartRefresher(
-        controller: homeController.refreshController, 
-        onRefresh: homeController.refreshData,        
-        enablePullDown: true,
-        enablePullUp: false,
-        header: const WaterDropHeader(waterDropColor: AppColor.primaryColor),
+      body: RefreshIndicator(
+        color: AppColor.primaryColor,
+        onRefresh: homeController.refreshData,
         child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -100,10 +103,7 @@ class HomeScreen extends GetView<HomeController> {
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTap: () {
-                        // Tapping location manually requests GPS updates
-                        profileController.fetchAndSaveCurrentLocation();
-                      },
+                      onTap: () => _showLocationSelectorBottomSheet(context),
                       child: Row(
                         children: [
                           const Icon(
@@ -277,4 +277,153 @@ class HomeScreen extends GetView<HomeController> {
 
   Widget _buildSpecialOffersSection() =>
       homeController.isLoading.value ? const SpecialOffersWidgetShimmer() : SpecialOffersWidget();
+
+  void _showLocationSelectorBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      backgroundColor: Colors.white,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Select Delivery Location 📍',
+                      style: AppTypography.h4.copyWith(
+                        color: AppColor.textColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Get.back(),
+                    ),
+                  ],
+                ),
+                const Divider(height: 20),
+                
+                // Action 1: Use Current GPS location
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.my_location_rounded, color: Colors.redAccent, size: 20),
+                  ),
+                  title: const Text('Use Current GPS Location', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.redAccent)),
+                  subtitle: const Text('Fetch precise coordinates from device GPS', style: TextStyle(fontSize: 11)),
+                  onTap: () async {
+                    Get.back();
+                    await profileController.fetchAndSaveCurrentLocation();
+                  },
+                ),
+                
+                // Action 2: Select location on Map
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.map_outlined, color: Colors.amber, size: 20),
+                  ),
+                  title: const Text('Select Location on Map', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber)),
+                  subtitle: const Text('Pin your exact address using Google Maps', style: TextStyle(fontSize: 11)),
+                  onTap: () {
+                    Get.back();
+                    Get.to(() => AddAddressWithMapScreen(cc: checkoutController));
+                  },
+                ),
+                const SizedBox(height: 12),
+                
+                Text(
+                  'Saved Addresses',
+                  style: AppTypography.caption.copyWith(
+                    color: Colors.grey[500],
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                
+                // Saved Addresses list
+                Expanded(
+                  child: Obx(() {
+                    final list = checkoutController.savedAddresses;
+                    if (list.isEmpty) {
+                      return const Center(
+                        child: Text(
+                          'No saved addresses yet.',
+                          style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic, fontSize: 13),
+                        ),
+                      );
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: list.length,
+                      itemBuilder: (context, index) {
+                        final addr = list[index];
+                        final type = addr.addressType.toLowerCase();
+                        IconData icon = Icons.location_on_outlined;
+                        if (type == 'home') icon = Icons.home_outlined;
+                        if (type == 'work') icon = Icons.work_outline_rounded;
+                        
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColor.primaryColor.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(icon, color: AppColor.primaryColor, size: 20),
+                          ),
+                          title: Text(addr.addressType.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          subtitle: Text(addr.fullAddress, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),
+                          onTap: () {
+                            // Update active location coordinates in profile controller
+                            profileController.latitude.value = addr.latitude;
+                            profileController.longitude.value = addr.longitude;
+                            profileController.user.update((val) {
+                              if (val != null) {
+                                val.address = addr.fullAddress;
+                              }
+                            });
+                            Get.back();
+                            Get.snackbar(
+                              'Location Updated 📍',
+                              'Delivering to ${addr.addressType.toUpperCase()}',
+                              backgroundColor: AppColor.primaryColor,
+                              colorText: Colors.white,
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+                          },
+                        );
+                      },
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

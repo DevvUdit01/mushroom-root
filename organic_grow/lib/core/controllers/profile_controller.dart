@@ -10,6 +10,16 @@ class ProfileController extends GetxController {
   var latitude = 0.0.obs;
   var longitude = 0.0.obs;
 
+  // Structured address fields from backend — used by checkout to pre-fill
+  var savedHouseNo = ''.obs;
+  var savedFloor = ''.obs;
+  var savedBuilding = ''.obs;
+  var savedArea = ''.obs;
+  var savedLandmark = ''.obs;
+  var savedCity = ''.obs;
+  var savedState = ''.obs;
+  var savedPincode = ''.obs;
+
   var user = User(
     id: '1',
     name: 'Ram Kumar',
@@ -153,7 +163,16 @@ class ProfileController extends GetxController {
           }
           latitude.value = parsedLat;
           longitude.value = parsedLng;
-          print("📍 [Location Flow] Parsed backend coordinates: Lat: $parsedLat, Lon: $parsedLng");
+
+          // Store structured fields for checkout pre-fill
+          savedHouseNo.value = addressData['houseNo']?.toString() ?? '';
+          savedFloor.value = addressData['floor']?.toString() ?? '';
+          savedBuilding.value = addressData['building']?.toString() ?? '';
+          savedArea.value = addressData['area']?.toString() ?? '';
+          savedLandmark.value = addressData['landmark']?.toString() ?? '';
+          savedCity.value = addressData['city']?.toString() ?? '';
+          savedState.value = addressData['state']?.toString() ?? '';
+          savedPincode.value = addressData['pincode']?.toString() ?? '';
 
           final fullAddr = addressData['fullAddress'] ?? '';
           final city = addressData['city'] ?? '';

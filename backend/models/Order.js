@@ -54,19 +54,46 @@ const orderSchema = new mongoose.Schema(
         "pending",
         "accepted",
         "packed",
-        "out_for_delivery",
+        "ready_for_pickup",   // vendor packed, waiting for delivery partner
+        "out_for_delivery",   // delivery partner picked up
         "delivered",
         "cancelled",
       ],
       default: "pending",
     },
 
+    pickupOTP: String,
+
     orderOTP: String,
 
     deliveryAddress: {
       fullAddress: String,
+      city: String,
+      state: String,
+      pincode: String,
+      landmark: String,
       latitude: Number,
       longitude: Number,
+    },
+
+    driverEarning: {
+      type: Number,
+      default: 0,
+    },
+
+    deliveryDistance: {
+      type: Number,
+      default: 0,
+    },
+
+    couponCode: {
+      type: String,
+      default: "",
+    },
+
+    couponDiscount: {
+      type: Number,
+      default: 0,
     },
   },
   {

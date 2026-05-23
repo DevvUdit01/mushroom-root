@@ -2,6 +2,7 @@ const Vendor = require("../models/Vendor");
 const Product = require("../models/Product");
 const Order = require("../models/Order");
 const User = require("../models/User");
+const DeliveryPartner = require("../models/DeliveryPartner");
 
 // ==========================================
 // CUSTOMER-FACING APIs (Public)
@@ -70,6 +71,10 @@ const getNearbyVendors = async (req, res) => {
       return R * c;
     };
 
+    const Settings = require("../models/Settings");
+    const settings = await Settings.findOne();
+    const adminRadius = settings?.deliveryPartnerRadius || 10;
+
     let vendors = rawVendors.filter(vendor => {
       const vLat = vendor.address?.location?.latitude;
       const vLng = vendor.address?.location?.longitude;
@@ -78,23 +83,14 @@ const getNearbyVendors = async (req, res) => {
       const distance = calculateDistance(latitude, longitude, vLat, vLng);
       vendor._doc.distance = parseFloat(distance.toFixed(1));
 
-      const allowedRadius = vendor.serviceRadius || 10;
+      // Filter vendors according to radius set by admin
+      const allowedRadius = adminRadius;
       return distance <= allowedRadius;
     });
 
     if (vendors.length === 0) {
-      console.log("⚠️ No nearby vendors found within radius. Returning all approved vendors as developer fallback.");
-      vendors = rawVendors.map(vendor => {
-        const vLat = vendor.address?.location?.latitude;
-        const vLng = vendor.address?.location?.longitude;
-        if (vLat !== undefined && vLng !== undefined) {
-          const distance = calculateDistance(latitude, longitude, vLat, vLng);
-          vendor._doc.distance = parseFloat(distance.toFixed(1));
-        } else {
-          vendor._doc.distance = 0;
-        }
-        return vendor;
-      });
+      console.log("⚠️ No nearby vendors found within radius. Service not available in this area.");
+      vendors = [];
     }
 
     vendors.sort((a, b) => b.rating - a.rating);
@@ -458,6 +454,7 @@ const getVendorOrders = async (req, res) => {
     const orders = await Order.find(filter)
       .populate("customerId", "name phone profileImage")
       .populate("products.productId", "productName images sellingPrice unit")
+      .populate("deliveryPartnerId", "name phone vehicleType vehicleNumber")
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -473,67 +470,88 @@ const getVendorOrders = async (req, res) => {
   }
 };
 
-// UPDATE ORDER STATUS (vendor accepts, packs, etc.)
+// UPDATE ORDER STATUS (vendor accepts, packs, cancels)
 const updateOrderStatus = async (req, res) => {
   try {
     const vendor = await Vendor.findOne({ userId: req.user.id });
-    if (!vendor) {
-      return res.status(404).json({
-        success: false,
-        message: "Vendor profile not found",
-      });
-    }
+    if (!vendor) return res.status(404).json({ success: false, message: "Vendor profile not found" });
 
     const { orderId } = req.params;
     const { orderStatus } = req.body;
 
-    const validStatuses = [
-      "accepted",
-      "packed",
-      "out_for_delivery",
-      "delivered",
-      "cancelled",
-    ];
+    const validStatuses = ["accepted", "packed", "cancelled"];
     if (!validStatuses.includes(orderStatus)) {
       return res.status(400).json({
         success: false,
-        message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+        message: `Vendor can only set status to: ${validStatuses.join(", ")}`,
       });
     }
 
-    const order = await Order.findOne({
-      _id: orderId,
-      vendorId: vendor._id,
-    });
-
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found or you don't own this order",
-      });
-    }
+    const order = await Order.findOne({ _id: orderId, vendorId: vendor._id });
+    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
 
     order.orderStatus = orderStatus;
 
-    // If delivered, update vendor earnings
-    if (orderStatus === "delivered") {
-      vendor.totalEarnings += order.totalAmount;
-      vendor.totalOrders += 1;
-      await vendor.save();
+    // When vendor marks order as PACKED → broadcast to all online+available partners within radius
+    let broadcastCount = 0;
+    if (orderStatus === "packed") {
+      if (!order.pickupOTP) {
+        order.pickupOTP = String(Math.floor(1000 + Math.random() * 9000));
+      }
+
+      const Settings = require("../models/Settings");
+      let settings = await Settings.findOne();
+      if (!settings) settings = await Settings.create({});
+      const broadcastRadius = settings.deliveryPartnerRadius ?? 2; // km
+
+      const deg2rad = (d) => d * (Math.PI / 180);
+      const haversine = (lat1, lon1, lat2, lon2) => {
+        const R = 6371;
+        const dLat = deg2rad(lat2 - lat1);
+        const dLon = deg2rad(lon2 - lon1);
+        const a = Math.sin(dLat / 2) ** 2 +
+          Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      };
+
+      const vLat = vendor.address?.location?.latitude || 0;
+      const vLng = vendor.address?.location?.longitude || 0;
+
+      // Find all online + available partners
+      const partners = await DeliveryPartner.find({ isOnline: true, isAvailable: true });
+
+      // Filter to those within broadcastRadius km of the vendor
+      const nearbyPartners = partners.filter(p => {
+        const pLat = p.currentLocation?.latitude;
+        const pLng = p.currentLocation?.longitude;
+        if (!pLat || !pLng) return false;
+        return haversine(vLat, vLng, pLat, pLng) <= broadcastRadius;
+      });
+
+      if (nearbyPartners.length > 0) {
+        // Mark order as ready_for_pickup — all nearby partners will see it and can accept
+        order.orderStatus = "ready_for_pickup";
+        broadcastCount = nearbyPartners.length;
+        // Store the list of notified partner IDs on the order for reference
+        // (actual acceptance is first-come-first-served via acceptPickup endpoint)
+      }
+      // If no partners nearby, order stays "packed" — vendor sees "no riders available"
     }
 
     await order.save();
 
     res.status(200).json({
       success: true,
-      message: `Order status updated to: ${orderStatus}`,
+      message: broadcastCount > 0
+        ? `Order packed! Broadcast sent to ${broadcastCount} nearby rider${broadcastCount > 1 ? 's' : ''}. Waiting for acceptance.`
+        : orderStatus === "packed"
+          ? "Order packed. No riders available nearby right now."
+          : `Order status updated to: ${order.orderStatus}`,
       order,
+      broadcastCount,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 

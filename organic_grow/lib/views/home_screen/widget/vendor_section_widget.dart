@@ -63,6 +63,59 @@ class VendorSectionWidget extends StatelessWidget {
         const SizedBox(height: 16),
 
         Obx(() {
+          if (homeController.vendors.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey[100]!),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    )
+                  ],
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColor.primaryColor.withOpacity(0.08),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.explore_outlined, size: 40, color: AppColor.primaryColor),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Service Not Available 📍',
+                        style: AppTypography.h4.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColor.textColor,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'We are currently expanding! We are not serving in your area yet.',
+                        textAlign: TextAlign.center,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: Colors.grey[500],
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }
+
           if (homeController.filteredVendors.isEmpty) {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),

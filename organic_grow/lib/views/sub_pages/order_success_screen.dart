@@ -10,6 +10,8 @@ class OrderSuccessScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? orderId = Get.arguments as String?;
+
     return Scaffold(
       backgroundColor: AppColor.primaryColor,
       body: SafeArea(
@@ -77,7 +79,11 @@ class OrderSuccessScreen extends StatelessWidget {
                 TextButton(
                   onPressed: () {
                     Get.offAllNamed(RouteConstant.dashBoardPae);
-                    Get.toNamed('/orders');
+                    if (orderId != null) {
+                      Get.toNamed('/track-order', arguments: orderId);
+                    } else {
+                      Get.toNamed('/orders');
+                    }
                   },
                   child: Text(
                     'Track Order',

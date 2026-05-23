@@ -90,18 +90,36 @@ class CategoriesSectionWidget extends StatelessWidget {
                           ),
                         ),
                         child: Center(
-                          child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: AppColor.primaryColor.withOpacity(0.06),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              icon,
-                              color: AppColor.primaryColor,
-                              size: 24,
-                            ),
+                          child: ClipOval(
+                            child: category.image != null && category.image!.isNotEmpty
+                                ? Image.network(
+                                    category.image!,
+                                    width: 64,
+                                    height: 64,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: AppColor.primaryColor.withOpacity(0.06),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(icon, color: AppColor.primaryColor, size: 24),
+                                    ),
+                                  )
+                                : Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      color: AppColor.primaryColor.withOpacity(0.06),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      icon,
+                                      color: AppColor.primaryColor,
+                                      size: 24,
+                                    ),
+                                  ),
                           ),
                         ),
                       ),

@@ -139,8 +139,20 @@ const updateProduct = async (req, res) => {
 // GET ALL PRODUCTS (public, supports location filtering)
 const getProducts = async (req, res) => {
   try {
-    const { lat, lng } = req.query;
+    const { lat, lng, q, featured, category } = req.query;
     let filter = {};
+
+    if (q) {
+      filter.productName = { $regex: q, $options: "i" };
+    }
+
+    if (featured === "true") {
+      filter.isFeatured = true;
+    }
+
+    if (category) {
+      filter.categoryId = category;
+    }
 
     if (lat && lng) {
       const latitude = parseFloat(lat);
@@ -162,7 +174,11 @@ const getProducts = async (req, res) => {
         return R * c;
       };
 
-      // 2. Filter vendors within 10 km radius (or serviceRadius)
+      // 2. Filter vendors within dynamic radius set by admin
+      const Settings = require("../models/Settings");
+      const settings = await Settings.findOne();
+      const adminRadius = settings?.deliveryPartnerRadius || 10;
+
       const nearbyVendorIds = rawVendors
         .filter((vendor) => {
           const vLat = vendor.address?.location?.latitude;
@@ -170,8 +186,7 @@ const getProducts = async (req, res) => {
           if (vLat === undefined || vLng === undefined) return false;
 
           const distance = calculateDistance(latitude, longitude, vLat, vLng);
-          // Set service radius to 10 km for now, support dynamic serviceRadius
-          const allowedRadius = vendor.serviceRadius || 10;
+          const allowedRadius = adminRadius;
           return distance <= allowedRadius;
         })
         .map((vendor) => vendor._id);
@@ -180,7 +195,8 @@ const getProducts = async (req, res) => {
       if (nearbyVendorIds.length > 0) {
         filter.vendorId = { $in: nearbyVendorIds };
       } else {
-        console.log("⚠️ No nearby vendors found within 10km radius. Returning all approved products as developer fallback.");
+        console.log(`⚠️ No nearby vendors found within ${adminRadius}km radius. Service not available in this area.`);
+        filter.vendorId = { $in: [] }; // Enforce empty product list returning no products
       }
     }
 

@@ -6,11 +6,10 @@ const offerSchema = new mongoose.Schema(
     discountText: { type: String, required: true },
     description: { type: String, required: true },
     badgeText: { type: String, required: true },
+    image: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model("Offer", offerSchema);

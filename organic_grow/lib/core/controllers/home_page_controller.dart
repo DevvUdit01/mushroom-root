@@ -1,9 +1,10 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:get/get.dart';
+import 'package:organic_grow/core/models/banner_model.dart';
 import 'package:organic_grow/core/models/category_model.dart';
 import 'package:organic_grow/core/models/product_model.dart';
 import 'package:organic_grow/core/models/vendor_model.dart';
 import 'package:organic_grow/core/services/api_services.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
 import 'package:organic_grow/core/controllers/profile_controller.dart';
 import 'package:organic_grow/core/controllers/connectivity_controller.dart';
 
@@ -11,12 +12,10 @@ class HomeController extends GetxController {
   var categories = <Category>[].obs;
   var featuredProducts = <Product>[].obs;
   var vendors = <Vendor>[].obs;
-  var banners = <String>[].obs;
+  var banners = <BannerItem>[].obs;
   var currentCarouselIndex = 0.obs;
   var isLoading = true.obs;
   var isRefreshing = false.obs;
-  
-  final RefreshController refreshController = RefreshController();
 
   final ConnectivityController connectivityController = Get.find<ConnectivityController>();
   late final ProfileController profileController;
@@ -52,7 +51,6 @@ class HomeController extends GetxController {
     // Worker to automatically fetch hyperlocal home data when coordinates are updated
     ever(profileController.latitude, (double lat) {
       if (lat != 0.0) {
-        print("🎯 [HomeController] GPS Location updated, reloading hyperlocal data...");
         fetchHomeData();
       }
     });
@@ -64,7 +62,6 @@ class HomeController extends GetxController {
     try {
       await connectivityController.checkConnection();
       if (!connectivityController.isConnected) {
-        refreshController.refreshFailed();
         isLoading.value = false;
         isRefreshing.value = false;
         Get.snackbar("No Internet", "Please check your connection and try again",
@@ -75,7 +72,23 @@ class HomeController extends GetxController {
       isLoading.value = true;
 
       final categoriesData = await ApiService.fetchCategories();
-      final bannersData = await ApiService.fetchBanners();
+
+      // Fetch banners from backend — fall back to assets if API fails or returns none
+      List<BannerItem> bannersData;
+      try {
+        final bannersRaw = await ApiService.fetchDynamicBanners();
+        if (bannersRaw.isNotEmpty) {
+          bannersData = bannersRaw
+              .map((b) => BannerItem.fromJson(b, ApiService.imageBaseUrl))
+              .where((b) => b.imageUrl.isNotEmpty)
+              .toList();
+        } else {
+          bannersData = _staticFallbackBanners();
+        }
+      } catch (e) {
+        debugPrint('⚠️ Banner fetch failed: $e — using static fallback');
+        bannersData = _staticFallbackBanners();
+      }
 
       final lat = profileController.latitude.value;
       final lng = profileController.longitude.value;
@@ -84,11 +97,9 @@ class HomeController extends GetxController {
       List<Vendor> vendorsData;
 
       if (lat != 0.0 && lng != 0.0) {
-        print("🎯 [HomeController] Fetching hyperlocal data for coordinates: ($lat, $lng)");
         productsData = await ApiService.fetchFeaturedProducts(lat: lat, lng: lng);
         vendorsData = await ApiService.fetchNearbyVendors(lat, lng);
       } else {
-        print("🎯 [HomeController] No location set. Fetching default vendors and products.");
         productsData = await ApiService.fetchFeaturedProducts();
         vendorsData = await ApiService.fetchVendors();
       }
@@ -100,11 +111,9 @@ class HomeController extends GetxController {
 
       isLoading.value = false;
       isRefreshing.value = false;
-      refreshController.refreshCompleted();
     } catch (e) {
       isLoading.value = false;
       isRefreshing.value = false;
-      refreshController.refreshFailed();
       Get.snackbar('Error', 'Failed to load data: $e',
           snackPosition: SnackPosition.BOTTOM);
     }
@@ -112,7 +121,6 @@ class HomeController extends GetxController {
 
   Future<void> refreshData() async {
     isRefreshing.value = true;
-    // Also trigger location update to check for new location
     if (ApiService.userToken != null) {
       await profileController.fetchUserProfile();
       await profileController.fetchAndSaveCurrentLocation();
@@ -125,9 +133,9 @@ class HomeController extends GetxController {
     currentCarouselIndex.value = index;
   }
 
-  @override
-  void onClose() {
-    refreshController.dispose();
-    super.onClose();
-  }
+  List<BannerItem> _staticFallbackBanners() => [
+        const BannerItem(id: 'f1', imageUrl: 'assets/banner_images/banner1.jpg'),
+        const BannerItem(id: 'f2', imageUrl: 'assets/banner_images/banner2.png'),
+        const BannerItem(id: 'f3', imageUrl: 'assets/banner_images/banner3.png'),
+      ];
 }

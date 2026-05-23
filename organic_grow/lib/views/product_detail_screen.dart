@@ -7,6 +7,7 @@ import 'package:organic_grow/core/controllers/cart_controller.dart';
 import 'package:organic_grow/core/models/cart_item_model.dart';
 import 'package:organic_grow/core/controllers/home_page_controller.dart';
 import 'package:organic_grow/core/controllers/wishlist_controller.dart';
+import 'package:organic_grow/core/services/api_services.dart';
 
 class ProductDetailScreen extends StatelessWidget {
   ProductDetailScreen({super.key});
@@ -375,6 +376,13 @@ class ProductDetailScreen extends StatelessWidget {
                           const SizedBox(height: 24),
                         ],
 
+                        // Reviews Section
+                        _ReviewsSection(product: product),
+
+                        const SizedBox(height: 28),
+                        const Divider(height: 1),
+                        const SizedBox(height: 24),
+
                         // Quantity Selector Card
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -588,6 +596,263 @@ class ProductDetailScreen extends StatelessWidget {
         size: 80,
         color: AppColor.primaryColor,
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REVIEWS SECTION — loads reviews + write-review button
+// ─────────────────────────────────────────────────────────────────────────────
+class _ReviewsSection extends StatefulWidget {
+  const _ReviewsSection({required this.product});
+  final Product product;
+
+  @override
+  State<_ReviewsSection> createState() => _ReviewsSectionState();
+}
+
+class _ReviewsSectionState extends State<_ReviewsSection> {
+  List<Map<String, dynamic>> _reviews = [];
+  bool _loading = true;
+  bool _canReview = false;
+  bool _alreadyReviewed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final reviews = await ApiService.fetchProductReviews(widget.product.id);
+      Map<String, dynamic>? eligibility;
+      if (ApiService.userToken != null) {
+        try {
+          eligibility = await ApiService.canReviewProduct(widget.product.id);
+        } catch (_) {}
+      }
+      if (mounted) {
+        setState(() {
+          _reviews = reviews;
+          _canReview = eligibility?['canReview'] == true;
+          _alreadyReviewed = eligibility?['reason'] == 'already_reviewed';
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  double get _avgRating {
+    if (_reviews.isEmpty) return 0;
+    final sum = _reviews.fold<double>(
+        0, (acc, r) => acc + ((r['rating'] as num?)?.toDouble() ?? 0));
+    return sum / _reviews.length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // Header row
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text('Ratings & Reviews',
+            style: AppTypography.h4
+                .copyWith(fontWeight: FontWeight.bold, color: AppColor.textColor)),
+        if (_canReview)
+          GestureDetector(
+            onTap: () async {
+              final result = await Get.toNamed('/write-review', arguments: {
+                'productId': widget.product.id,
+                'vendorId': widget.product.vendorId,
+                'productName': widget.product.name,
+              });
+              if (result == true) _load();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColor.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(children: [
+                const Icon(Icons.rate_review_rounded,
+                    color: AppColor.primaryColor, size: 14),
+                const SizedBox(width: 4),
+                Text('Write Review',
+                    style: AppTypography.caption.copyWith(
+                        color: AppColor.primaryColor,
+                        fontWeight: FontWeight.bold)),
+              ]),
+            ),
+          )
+        else if (_alreadyReviewed)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text('Reviewed ✓',
+                style: AppTypography.caption.copyWith(
+                    color: Colors.green, fontWeight: FontWeight.bold)),
+          ),
+      ]),
+      const SizedBox(height: 14),
+
+      if (_loading)
+        const Center(
+            child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: CircularProgressIndicator(
+              color: AppColor.primaryColor, strokeWidth: 2),
+        ))
+      else if (_reviews.isEmpty)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: Row(children: [
+            const Icon(Icons.star_border_rounded,
+                color: Colors.amber, size: 28),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'No reviews yet. Be the first to review this product!',
+                style: AppTypography.bodySmall.copyWith(
+                    color: AppColor.textColor.withValues(alpha: 0.55)),
+              ),
+            ),
+          ]),
+        )
+      else ...[
+        // Average rating summary
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.amber.withValues(alpha: 0.2)),
+          ),
+          child: Row(children: [
+            Text(_avgRating.toStringAsFixed(1),
+                style: AppTypography.h1.copyWith(
+                    fontWeight: FontWeight.bold, color: Colors.amber[700])),
+            const SizedBox(width: 12),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(
+                children: List.generate(
+                    5,
+                    (i) => Icon(
+                          i < _avgRating.round()
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          color: Colors.amber,
+                          size: 18,
+                        )),
+              ),
+              const SizedBox(height: 4),
+              Text('${_reviews.length} review${_reviews.length == 1 ? '' : 's'}',
+                  style: AppTypography.caption.copyWith(
+                      color: AppColor.textColor.withValues(alpha: 0.55))),
+            ]),
+          ]),
+        ),
+        const SizedBox(height: 14),
+
+        // Review list (max 5 shown)
+        ..._reviews.take(5).map((r) => _ReviewTile(review: r)),
+
+        if (_reviews.length > 5)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              '+ ${_reviews.length - 5} more reviews',
+              style: AppTypography.caption.copyWith(
+                  color: AppColor.primaryColor, fontWeight: FontWeight.w600),
+            ),
+          ),
+      ],
+    ]);
+  }
+}
+
+class _ReviewTile extends StatelessWidget {
+  const _ReviewTile({required this.review});
+  final Map<String, dynamic> review;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = review['userId'] as Map<String, dynamic>?;
+    final name = user?['name'] as String? ?? 'Anonymous';
+    final rating = (review['rating'] as num?)?.toInt() ?? 0;
+    final text = review['reviewText'] as String? ?? '';
+    final createdAt = review['createdAt'] as String? ?? '';
+    String dateStr = '';
+    if (createdAt.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(createdAt);
+        const months = [
+          '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        dateStr = '${dt.day} ${months[dt.month]} ${dt.year}';
+      } catch (_) {}
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: AppColor.primaryColor.withValues(alpha: 0.12),
+            child: Text(
+              name.isNotEmpty ? name[0].toUpperCase() : 'U',
+              style: AppTypography.bodySmall.copyWith(
+                  color: AppColor.primaryColor, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(name,
+                  style: AppTypography.bodySmall.copyWith(
+                      fontWeight: FontWeight.bold, color: AppColor.textColor)),
+              if (dateStr.isNotEmpty)
+                Text(dateStr,
+                    style: AppTypography.caption.copyWith(
+                        color: AppColor.textColor.withValues(alpha: 0.45))),
+            ]),
+          ),
+          Row(
+            children: List.generate(
+                5,
+                (i) => Icon(
+                      i < rating ? Icons.star_rounded : Icons.star_border_rounded,
+                      color: Colors.amber,
+                      size: 14,
+                    )),
+          ),
+        ]),
+        if (text.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(text,
+              style: AppTypography.bodySmall.copyWith(
+                  color: AppColor.textColor.withValues(alpha: 0.7),
+                  height: 1.5)),
+        ],
+      ]),
     );
   }
 }

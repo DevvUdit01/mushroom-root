@@ -272,6 +272,19 @@ const deleteProduct = async (req, res) => {
   }
 };
 
+// TOGGLE PRODUCT FEATURED
+const toggleProductFeatured = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ success: false, message: "Product not found" });
+    product.isFeatured = !product.isFeatured;
+    await product.save();
+    res.status(200).json({ success: true, message: `Product ${product.isFeatured ? "marked as featured" : "removed from featured"}`, product });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // 9. ADD CATEGORY
 const addCategory = async (req, res) => {
   try {
@@ -324,6 +337,7 @@ module.exports = {
   updateOrderStatus,
   getProducts,
   deleteProduct,
+  toggleProductFeatured,
   addCategory,
   deleteCategory
 };

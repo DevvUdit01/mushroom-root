@@ -12,7 +12,8 @@ const {
   getProducts,
   deleteProduct,
   addCategory,
-  deleteCategory
+  deleteCategory,
+  toggleProductFeatured
 } = require("../controllers/adminController");
 
 // Admin role authorization middleware
@@ -38,6 +39,7 @@ router.get("/orders", protect, isAdmin, getOrders);
 router.put("/orders/:id/status", protect, isAdmin, updateOrderStatus);
 router.get("/products", protect, isAdmin, getProducts);
 router.delete("/products/:id", protect, isAdmin, deleteProduct);
+router.put("/products/:id/feature", protect, isAdmin, toggleProductFeatured);
 router.post("/categories", protect, isAdmin, addCategory);
 router.delete("/categories/:id", protect, isAdmin, deleteCategory);
 

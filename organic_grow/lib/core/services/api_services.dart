@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' hide Category;
 import 'package:organic_grow/core/models/category_model.dart';
+import 'package:organic_grow/core/models/offer_model.dart';
 import 'package:organic_grow/core/models/product_model.dart';
 import 'package:organic_grow/core/models/vendor_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,8 +11,8 @@ import 'package:organic_grow/core/controllers/cart_controller.dart';
 import 'package:organic_grow/core/controllers/wishlist_controller.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.15:5000/api';
-  static const String imageBaseUrl = 'http://192.168.1.15:5000/';
+  static const String baseUrl = 'http://192.168.1.12:5000/api';
+  static const String imageBaseUrl = 'http://192.168.1.12:5000/';
 
   static final Dio _dio = _initDio();
 
@@ -304,6 +305,10 @@ class ApiService {
           id: json['_id'] ?? '',
           name: json['name'] ?? '',
           icon: json['icon'] ?? 'local_florist',
+          image: (json['image'] != null && (json['image'] as String).isNotEmpty)
+              ? buildImageUrl(json['image'] as String)
+              : null,
+          itemCount: (json['productCount'] as num?)?.toInt() ?? 0,
         )).toList();
       }
       return [];
@@ -321,6 +326,7 @@ class ApiService {
   static Future<List<Product>> fetchFeaturedProducts({double? lat, double? lng}) async {
     try {
       final response = await _dio.get('/products', queryParameters: {
+        'featured': 'true',
         if (lat != null) 'lat': lat,
         if (lng != null) 'lng': lng,
       });
@@ -352,7 +358,87 @@ class ApiService {
       }
       return [];
     } catch (e) {
-      debugPrint("Failed to fetch products: $e");
+      debugPrint("Failed to fetch featured products: $e");
+      return [];
+    }
+  }
+
+  // Fetch products by category
+  static Future<List<Product>> fetchProductsByCategory(String categoryId, {double? lat, double? lng}) async {
+    try {
+      final response = await _dio.get('/products', queryParameters: {
+        'category': categoryId,
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
+      });
+      if (response.data['success'] == true) {
+        final List<dynamic> list = response.data['products'] ?? [];
+        return list.map((json) {
+          final product = Product.fromJson(json);
+          return Product(
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            mrpPrice: product.mrpPrice,
+            image: buildImageUrl(product.image),
+            images: product.images.map((e) => buildImageUrl(e)).toList(),
+            rating: product.rating == 0 ? 4.5 : product.rating,
+            categoryId: product.categoryId,
+            categoryName: product.categoryName,
+            description: product.description,
+            unit: product.unit,
+            weight: product.weight,
+            stock: product.stock,
+            vendorId: product.vendorId,
+            vendorName: product.vendorName,
+            isAvailable: product.isAvailable,
+            isFeatured: product.isFeatured,
+          );
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Failed to fetch products by category: $e");
+      return [];
+    }
+  }
+
+  // Search products by name
+  static Future<List<Product>> searchProducts(String query, {double? lat, double? lng}) async {
+    try {
+      final response = await _dio.get('/products', queryParameters: {
+        'q': query,
+        if (lat != null) 'lat': lat,
+        if (lng != null) 'lng': lng,
+      });
+      if (response.data['success'] == true) {
+        final List<dynamic> list = response.data['products'] ?? [];
+        return list.map((json) {
+          final product = Product.fromJson(json);
+          return Product(
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            mrpPrice: product.mrpPrice,
+            image: buildImageUrl(product.image),
+            images: product.images.map((e) => buildImageUrl(e)).toList(),
+            rating: product.rating == 0 ? 4.5 : product.rating,
+            categoryId: product.categoryId,
+            categoryName: product.categoryName,
+            description: product.description,
+            unit: product.unit,
+            weight: product.weight,
+            stock: product.stock,
+            vendorId: product.vendorId,
+            vendorName: product.vendorName,
+            isAvailable: product.isAvailable,
+            isFeatured: product.isFeatured,
+          );
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Failed to search products: $e");
       return [];
     }
   }
@@ -672,11 +758,17 @@ class ApiService {
   }
 
   /// Place an order from the cart
-  static Future<Map<String, dynamic>> placeOrder(String paymentMethod) async {
+  static Future<Map<String, dynamic>> placeOrder(
+    String paymentMethod, {
+    required Map<String, dynamic> deliveryAddress,
+    String? couponCode,
+  }) async {
     try {
       initInterceptors();
       final response = await _dio.post('/orders/place', data: {
         'paymentMethod': paymentMethod,
+        'deliveryAddress': deliveryAddress,
+        if (couponCode != null && couponCode.isNotEmpty) 'couponCode': couponCode,
       });
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
@@ -684,11 +776,199 @@ class ApiService {
     }
   }
 
+  /// Save / update the user's delivery address on the backend
+  static Future<Map<String, dynamic>> saveAddress({
+    required String houseNo,
+    String floor = '',
+    String building = '',
+    String area = '',
+    String landmark = '',
+    required String city,
+    String state = '',
+    required String pincode,
+    double latitude = 0.0,
+    double longitude = 0.0,
+  }) async {
+    try {
+      initInterceptors();
+      final response = await _dio.post('/auth/address', data: {
+        'houseNo': houseNo, 'floor': floor, 'building': building,
+        'area': area, 'landmark': landmark, 'city': city,
+        'state': state, 'pincode': pincode,
+        'latitude': latitude, 'longitude': longitude,
+      });
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to save address.');
+    }
+  }
+
+  /// Fetch all saved addresses for the user from Address collection
+  static Future<List<Map<String, dynamic>>> fetchSavedAddresses() async {
+    try {
+      initInterceptors();
+      final response = await _dio.get('/auth/addresses');
+      if (response.data['success'] == true) {
+        return List<Map<String, dynamic>>.from(response.data['addresses'] ?? []);
+      }
+      return [];
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch addresses.');
+    }
+  }
+
+  /// Add or update a saved address in the Address collection
+  static Future<Map<String, dynamic>> addSavedAddress({
+    required String houseNo,
+    String floor = '',
+    String building = '',
+    String area = '',
+    String landmark = '',
+    required String city,
+    String state = '',
+    required String pincode,
+    String addressType = 'home',
+    String? addressId,
+    double latitude = 0.0,
+    double longitude = 0.0,
+  }) async {
+    try {
+      initInterceptors();
+      final response = await _dio.post('/auth/addresses', data: {
+        'houseNo': houseNo, 'floor': floor, 'building': building,
+        'area': area, 'landmark': landmark, 'city': city,
+        'state': state, 'pincode': pincode, 'addressType': addressType,
+        if (addressId != null) 'addressId': addressId,
+        'latitude': latitude, 'longitude': longitude,
+      });
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to save address.');
+    }
+  }
+
   // ==========================================
-  // OFFERS
+  // BANNERS
   // ==========================================
+
+  /// Fetch active banners from backend (replaces mock)
+  static Future<List<Map<String, dynamic>>> fetchDynamicBanners() async {
+    final response = await _dio.get('/banners');
+    if (response.data['success'] == true) {
+      return List<Map<String, dynamic>>.from(response.data['banners'] ?? []);
+    }
+    return [];
+  }
+
+  // ==========================================
+  // COUPONS
+  // ==========================================
+
+  /// Fetch all active (non-expired) coupons
+  static Future<List<Map<String, dynamic>>> fetchActiveCoupons() async {
+    try {
+      final response = await _dio.get('/coupons');
+      if (response.data['success'] == true) {
+        return List<Map<String, dynamic>>.from(response.data['coupons'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Failed to fetch coupons: $e");
+      return [];
+    }
+  }
+
+  /// Validate a coupon code against a subtotal — returns discount amount
+  static Future<Map<String, dynamic>> validateCoupon(String code, double subtotal) async {
+    try {
+      final response = await _dio.post('/coupons/validate', data: {
+        'code': code,
+        'subtotal': subtotal,
+      });
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Invalid coupon.');
+    }
+  }
+
+  // ==========================================
+  // REVIEWS
+  // ==========================================
+
+  /// Fetch all reviews for a product
+  static Future<List<Map<String, dynamic>>> fetchProductReviews(String productId) async {
+    try {
+      final response = await _dio.get('/reviews/product/$productId');
+      if (response.data['success'] == true) {
+        return List<Map<String, dynamic>>.from(response.data['reviews'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      debugPrint("Failed to fetch reviews: $e");
+      return [];
+    }
+  }
+
+  /// Check if the logged-in user can review a product
+  static Future<Map<String, dynamic>> canReviewProduct(String productId) async {
+    try {
+      initInterceptors();
+      final response = await _dio.get('/reviews/can-review/$productId');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to check review eligibility.');
+    }
+  }
+
+  /// Post a review for a product
+  static Future<Map<String, dynamic>> postReview({
+    required String productId,
+    required String vendorId,
+    required int rating,
+    String reviewText = '',
+  }) async {
+    try {
+      initInterceptors();
+      final response = await _dio.post('/reviews', data: {
+        'productId': productId,
+        'vendorId': vendorId,
+        'rating': rating,
+        'reviewText': reviewText,
+      });
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to post review.');
+    }
+  }
+
+  /// Fetch app settings (delivery charge, tax %, min order, etc.)
+  static Future<Map<String, dynamic>> fetchSettings() async {
+    try {
+      final response = await _dio.get('/settings');
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch settings.');
+    }
+  }
   
-  /// Fetch the special offer
+  /// Fetch all active offers
+  static Future<List<Offer>> fetchOffers() async {
+    try {
+      final response = await _dio.get('/offers');
+      if (response.data['success'] == true) {
+        final list = response.data['offers'] as List<dynamic>? ?? [];
+        return list
+            .map((j) => Offer.fromJson(j as Map<String, dynamic>,
+                imageBaseUrl: imageBaseUrl))
+            .toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Failed to fetch offers.');
+    }
+  }
+
+  /// Legacy single-offer endpoint (kept for backward compat)
   static Future<Map<String, dynamic>> fetchSpecialOffer() async {
     try {
       final response = await _dio.get('/offers/special');
