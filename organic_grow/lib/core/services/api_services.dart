@@ -11,8 +11,8 @@ import 'package:organic_grow/core/controllers/cart_controller.dart';
 import 'package:organic_grow/core/controllers/wishlist_controller.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.1.12:5000/api';
-  static const String imageBaseUrl = 'http://192.168.1.12:5000/';
+  static const String baseUrl = 'http://192.168.1.20:5000/api';
+  static const String imageBaseUrl = 'http://192.168.1.20:5000/';
 
   static final Dio _dio = _initDio();
 

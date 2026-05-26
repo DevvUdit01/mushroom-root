@@ -450,6 +450,12 @@ function openAddProductModal() {
   document.getElementById('prod-id').value = '';
   document.getElementById('product-modal').classList.add('active');
   document.getElementById('prod-images').required = true;
+
+  // Clear the image preview container
+  const previewContainer = document.getElementById('product-images-preview');
+  if (previewContainer) {
+    previewContainer.innerHTML = '';
+  }
 }
 
 function closeProductModal() {
@@ -518,6 +524,21 @@ function editProduct(productId) {
   
   // Images are optional when editing
   document.getElementById('prod-images').required = false;
+
+  // Render existing images in the preview container
+  const previewContainer = document.getElementById('product-images-preview');
+  if (previewContainer) {
+    previewContainer.innerHTML = '';
+    if (prod.images && prod.images.length > 0) {
+      prod.images.forEach(img => {
+        const wrapper = document.createElement('div');
+        wrapper.style = "width: 70px; height: 70px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0; position: relative;";
+        const src = img.startsWith('/') ? img : '/' + img;
+        wrapper.innerHTML = `<img src="${src}" style="width:100%; height:100%; object-fit:cover;" onerror="this.src='https://cdn-icons-png.flaticon.com/512/3062/3062634.png'">`;
+        previewContainer.appendChild(wrapper);
+      });
+    }
+  }
 
   document.getElementById('product-modal').classList.add('active');
 }
@@ -817,4 +838,25 @@ function handleLogout() {
   document.getElementById('login-form').classList.remove('hidden');
   document.getElementById('otp-form').classList.add('hidden');
   document.getElementById('login-phone').value = '';
+}
+
+// ----------------------------------------------------
+// PRODUCT IMAGE PREVIEW
+// ----------------------------------------------------
+function handleProductImagePreviews(input) {
+  const container = document.getElementById('product-images-preview');
+  if (!container) return;
+  container.innerHTML = '';
+  if (input.files && input.files.length > 0) {
+    Array.from(input.files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const wrapper = document.createElement('div');
+        wrapper.style = "width: 70px; height: 70px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;";
+        wrapper.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;" />`;
+        container.appendChild(wrapper);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 }

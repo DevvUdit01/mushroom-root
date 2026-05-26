@@ -483,11 +483,12 @@
             <div class="form-group col-span-2">
               <label>Product Images (Max 5)</label>
               <div class="file-upload">
-                <input type="file" id="prod-images" accept="image/*" multiple>
+                <input type="file" id="prod-images" accept="image/*" multiple onchange="handleProductImagePreviews(this)">
                 <label for="prod-images" class="file-label">
                   <i data-lucide="upload"></i> Upload Images
                 </label>
               </div>
+              <div id="product-images-preview" style="display: flex; gap: 10px; margin-top: 15px; overflow-x: auto; padding: 5px 0;"></div>
             </div>
           </div>
           <div class="modal-actions">

@@ -13,7 +13,10 @@ const {
   deleteProduct,
   addCategory,
   deleteCategory,
-  toggleProductFeatured
+  toggleProductFeatured,
+  getCustomers,
+  getDeliveryPartners,
+  updateDriverKyc
 } = require("../controllers/adminController");
 
 // Admin role authorization middleware
@@ -42,5 +45,9 @@ router.delete("/products/:id", protect, isAdmin, deleteProduct);
 router.put("/products/:id/feature", protect, isAdmin, toggleProductFeatured);
 router.post("/categories", protect, isAdmin, addCategory);
 router.delete("/categories/:id", protect, isAdmin, deleteCategory);
+
+router.get("/customers", protect, isAdmin, getCustomers);
+router.get("/delivery-partners", protect, isAdmin, getDeliveryPartners);
+router.put("/delivery-partners/:id/kyc", protect, isAdmin, updateDriverKyc);
 
 module.exports = router;

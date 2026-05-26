@@ -112,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 : (partner.profileImage.isNotEmpty
                                     ? NetworkImage(partner.profileImage.startsWith('http')
                                         ? partner.profileImage
-                                        : 'http://192.168.1.12:5000/${partner.profileImage}')
+                                        : 'http://192.168.1.20:5000/${partner.profileImage}')
                                     : null),
                             child: partner.profileImage.isEmpty && _selectedPhoto == null
                                 ? Icon(Icons.person_rounded, size: 54, color: AppTheme.textMuted)

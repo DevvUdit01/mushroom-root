@@ -114,18 +114,23 @@ class _HomeWrapperState extends State<_HomeWrapper> {
       if (order == null) { _lastSeenOrderId = null; return; }
       // Only show the incoming screen if this is a NEW order we haven't seen
       if (order.id != _lastSeenOrderId &&
+          !dc.declinedOrderIds.contains(order.id) &&
           order.orderStatus == 'ready_for_pickup' &&
           dc.isAvailable.value) {
         _lastSeenOrderId = order.id;
-        // Small delay so home screen renders first
-        Future.delayed(const Duration(milliseconds: 300), () {
-          if (!_isIncomingOpen && Get.currentRoute != '/incoming-order') {
-            _isIncomingOpen = true;
-            Get.toNamed('/incoming-order', arguments: order)?.then((_) {
-              _isIncomingOpen = false;
-            });
-          }
-        });
+        if (!_isIncomingOpen) {
+          _isIncomingOpen = true;
+          // Small delay so home screen renders first
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (Get.currentRoute != '/incoming-order') {
+              Get.toNamed('/incoming-order', arguments: order)?.then((_) {
+                _isIncomingOpen = false;
+              });
+            } else {
+              _isIncomingOpen = true;
+            }
+          });
+        }
       }
     });
   }

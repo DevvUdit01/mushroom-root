@@ -28,7 +28,7 @@ class OrderItem {
       if (imgs is List && imgs.isNotEmpty) {
         image = imgs[0].toString().replaceAll('\\', '/');
         if (!image.startsWith('http')) {
-          image = 'http://192.168.1.12:5000/$image';
+          image = 'http://192.168.1.20:5000/$image';
         }
       }
       price = ((prod['sellingPrice'] ?? prod['mrpPrice'] ?? json['price']) as num).toDouble();

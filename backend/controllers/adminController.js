@@ -4,6 +4,7 @@ const Vendor = require("../models/Vendor");
 const Product = require("../models/Product");
 const Category = require("../models/Category");
 const Order = require("../models/Order");
+const DeliveryPartner = require("../models/DeliveryPartner");
 
 // ADMIN LOGIN — Phone + Password (credentials stored in .env)
 const adminLogin = async (req, res) => {
@@ -328,6 +329,98 @@ const deleteCategory = async (req, res) => {
   }
 };
 
+// GET ALL CUSTOMERS
+const getCustomers = async (req, res) => {
+  try {
+    const customers = await User.find({ role: "customer" }).sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      customers
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// GET ALL DELIVERY PARTNERS
+const getDeliveryPartners = async (req, res) => {
+  try {
+    const partners = await DeliveryPartner.find()
+      .populate("userId", "name email phone role isVerified profileImage")
+      .sort({ createdAt: -1 });
+
+    const formattedPartners = partners.map(partner => ({
+      _id: partner._id,
+      userId: partner.userId,
+      name: partner.name,
+      phone: partner.phone,
+      email: partner.email,
+      kycStatus: partner.kycStatus,
+      kycRejectionReason: partner.kycRejectionReason,
+      isApproved: partner.isApproved,
+      isOnline: partner.isOnline,
+      isAvailable: partner.isAvailable,
+      earnings: partner.earnings,
+      totalDeliveries: partner.totalDeliveries,
+      kyc: partner.kyc,
+      profileImage: partner.profileImage,
+      vehicleInfo: {
+        vehicleType: partner.vehicleType || "—",
+        model: "—",
+        plateNumber: partner.vehicleNumber || "—"
+      },
+      createdAt: partner.createdAt
+    }));
+
+    res.status(200).json({
+      success: true,
+      partners: formattedPartners
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// UPDATE DELIVERY PARTNER KYC STATUS
+const updateDriverKyc = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, rejectionReason } = req.body;
+
+    const partner = await DeliveryPartner.findById(id);
+    if (!partner) {
+      return res.status(404).json({ success: false, message: "Delivery partner not found" });
+    }
+
+    if (status === "approved") {
+      partner.kycStatus = "approved";
+      partner.isApproved = true;
+      partner.kycRejectionReason = "";
+      
+      // Update associated user role to delivery
+      if (partner.userId) {
+        await User.findByIdAndUpdate(partner.userId, { role: "delivery" });
+      }
+    } else if (status === "rejected") {
+      partner.kycStatus = "rejected";
+      partner.isApproved = false;
+      partner.kycRejectionReason = rejectionReason || "KYC verification failed";
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid status provided" });
+    }
+
+    await partner.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Driver KYC has been ${status === "approved" ? "approved" : "rejected"} successfully`,
+      partner
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   adminLogin,
   getStats,
@@ -339,5 +432,8 @@ module.exports = {
   deleteProduct,
   toggleProductFeatured,
   addCategory,
-  deleteCategory
+  deleteCategory,
+  getCustomers,
+  getDeliveryPartners,
+  updateDriverKyc
 };

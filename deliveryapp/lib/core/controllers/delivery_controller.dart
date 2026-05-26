@@ -14,6 +14,7 @@ class DeliveryController extends GetxController {
   var totalDeliveries = 0.obs;
   var totalEarnings = 0.0.obs;
   var todayDeliveries = 0.obs;
+  var declinedOrderIds = <String>{}.obs;
 
   // Polling timer — checks for new assigned orders every 5s when online
   Timer? _pollTimer;
@@ -95,6 +96,7 @@ class DeliveryController extends GetxController {
         } else {
           _stopPolling();
           assignedOrder.value = null;
+          declinedOrderIds.clear();
           Get.snackbar('You are Offline 🔴', 'You will not receive requests',
               backgroundColor: Colors.grey[700], colorText: Colors.white,
               snackPosition: SnackPosition.BOTTOM, duration: const Duration(seconds: 2));

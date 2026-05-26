@@ -29,7 +29,7 @@ class _IncomingOrderScreenState extends State<IncomingOrderScreen> with SingleTi
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (_countdown <= 1) {
         t.cancel();
-        if (mounted) Get.back();
+        if (mounted) Navigator.of(context).pop();
       } else {
         setState(() => _countdown--);
       }
@@ -127,7 +127,10 @@ class _IncomingOrderScreenState extends State<IncomingOrderScreen> with SingleTi
             Row(children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => Get.back(),
+                  onPressed: () {
+                    dc.declinedOrderIds.add(order.id);
+                    Navigator.of(context).pop();
+                  },
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     side: BorderSide(color: AppTheme.border),
@@ -141,8 +144,8 @@ class _IncomingOrderScreenState extends State<IncomingOrderScreen> with SingleTi
                 flex: 2,
                 child: Obx(() => ElevatedButton(
                   onPressed: dc.isLoading.value ? null : () async {
+                    Navigator.of(context).pop();
                     await dc.acceptOrder(order.id);
-                    if (mounted) Get.back();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
